@@ -1,4 +1,4 @@
-# Symboleo IDE
+# Symboleo Text Editor
 An IDE for the formal contract specification Symboleo is created using [Xtext](https://www.eclipse.org/Xtext/).
 
 # What is Symboleo?
