@@ -2,8 +2,226 @@ grammar org.xtext.CSMLab.symboleo.Symboleo with org.eclipse.xtext.common.Termina
 
 generate symboleo "http://www.xtext.org/CSMLab/symboleo/Symboleo"
 
-Model:
-	greetings+=Greeting*;
+ContractSpec:
+	(domainSpecs+=DomainSpec) (contracts+=Contract)
+;
 	
-Greeting:
-	'Hello' name=ID '!';
+DomainSpec:
+	'Domain' name=ID (dConcepts += DConcept ';')+ (ctypes+=CType)? 'endDomain'
+;
+
+DConcept:
+		name=ID ('isA' conceptTypes+=CType) ('with')? 
+	(attributes+=Att ',')* (attributes+=Att)?
+	| name=ID 'isA' 'Enumeration' '(' (enumerationItems+=enumItem ',')* 
+	enumerationItems+=enumItem ')'
+;
+
+enumItem:
+	{enumItem} name=ID
+;
+
+CType:
+	DomainType | {CType} OntoCType | {CType} BasicType
+;
+
+DomainType:
+	dtypes += [DConcept]
+;
+
+BasicType:
+	'NUMBER' | 'STRING' | 'DATE'
+;
+
+OntoCType:
+	('ASSET' | 'EVENT' | 'ROLE' | 'SITUATION' | 'CONTRACT')
+;
+
+Contract:
+	'Contract' name=ID '(' (parameters+=Param ',')+ (parameters+=Param) ')'
+		('Declarations' (declarations+=Declar ';')*)?
+		('Preconditions' (propositions+=Prop ';')*)?
+		('Postconditions' (propositions+=Prop ';')*)?
+		'Obligations' (obligations+=Obl ';')+
+		('SurvivingObls' (obligations+=Obl ';')*)?
+		('Powers' (powers+=Pow ';')*)?
+		('Constraints' (propositions+=Prop ';')*)?
+	'endContract'
+;
+
+Att:
+	Pair
+;
+
+Param:
+	DeclarPair
+;
+
+Declar:
+	Pair 'with' (names+=Name ':=' names+=Name ',')* 
+	(names+=Name ':=' names+=Name)
+;
+
+DeclarPair:
+	name=ID ':' typeNames+=TypeName
+;
+
+TypeName:
+	name=ID | {TypeName} BasicType
+;
+
+Pair:
+	name=ID ':' types+=CType
+;
+
+Obl:
+	name=ID ':' (trigger=Prop '->')? 'O' '(' roles+=Name ',' roles+=Name ','
+	antecedent=Prop ',' consequent=Prop ')'
+;
+
+Prop:
+	junctions+=Junc ('OR' junctions+=Junc)*
+;
+
+Junc:
+	negativeAtoms+=Neg ('AND' negativeAtoms+=Neg)*
+;
+
+Neg:
+	('NOT')? atomicExpressions+=Atom
+;
+
+Atom:
+	eventPropositions+=EventProp
+	
+	| situationPropositions+=SitProp
+	
+	| shortHandNames+=Name '(' (names+=Name ',')* names+=Name 
+	(',' points+=Point)* (',' intervals+=Interval)* ')'
+	| points+=Point 'within' intervals+=Interval
+	|'(' propositions+=Prop ')'
+	|'exists' varName+=Name '|' setExps+=SetExp '(' metaconstraints+=MetaConst ')'
+	|'forAll' varName+=Name '|' setExps+=SetExp '(' metaconstraints+=MetaConst ')'
+	| {Atom} 'TRUE' | {Atom} 'FALSE' 
+;
+
+SitProp:
+	'occurs' '(' situationName = [Name] ',' intervals+=Interval ')'
+	| 'occurs' '(' oSituationName = oState ',' intervals+=Interval ')'
+	| 'occurs' '(' cSituationName = cState ',' intervals+=Interval ')'
+	| 'occurs' '(' pSituationName = pState ',' intervals+=Interval ')'
+;
+
+EventProp:
+	'happens' '(' eventName = [Declar] ',' points+=Point ')'
+	| 'happens' '(' oEventName = oEvent ',' points+=Point ')'
+	| 'happens' '(' cEventName = cEvent ',' points+=Point ')'
+	| 'happens' '(' pEventName = pEvent ',' points+=Point ')'
+;
+
+MetaConst:
+	'CannotBeAssigned'
+;
+
+Interval:
+	situationName=SitName | '[' points+=Point ',' points+=Point ']'
+	| {Interval} 'UNNAMED_INTERVAL' 
+	| (situationNames+=SitName)(tempOps+=TempOp)(intConsts+=IntConst)(units+=Unit)
+	| (intConsts+=IntConst)(units+=Unit)(tempOps+=TempOp)(situationNames+=SitName)
+;
+
+SitName:
+	SitName+=Name | oStates+=oState | pStates+=pState | cStates+=cState 
+	| oEvents+=oEvent | cEvents+=cEvent | pEvents+=pEvent
+;
+
+Unit:
+	'SECONDS' | 'MINUTES' | 'HOURS' | 'DAYS' | 'WEEKS' | 'MONTHS' | 'QUARTERS' 
+	| 'YEARS'
+;
+
+IntConst:
+	{IntConst} Type = INT
+;
+
+TempOp:
+	'BEFORE' | 'AFTER' | 'AT' | 'WITHIN' | '+' | '-'
+;
+
+Point:
+	eventNames+=SitName  | {Point} 'UNNAMED_POINT' | (pointConsts+=PointConst) 
+	| (pointConsts+=PointConst)(units+=Unit)(tempOps+=TempOp)(eventNames+=SitName)
+	| (eventNames+=SitName)(tempOps+=TempOp)(pointConsts+=PointConst)(units+=Unit)
+;
+
+Name:
+	name=ID
+;
+
+pEvent:
+	powEvent=PowEvent '(' powName=[Pow] ')'
+;
+
+PowEvent:
+	'pTRIGGERED' | 'pACTIVATED' | 'pSUSPENDED' | 'pRESUMED' | 'pEXERTED' 
+	| 'pEXPIRED' | 'pTERMINATED'
+;
+
+cEvent:
+	contrEvent=ContrEvent '(' contrName=[Contract] ')'
+;
+
+ContrEvent:
+	'cACTIVATED' | 'cSUSPENDED' | 'cRESUMED' | 'cFULFILLED_ACTIVE_OBLS' 
+	| 'cREVOKED_PARTY' | 'cASSIGNED_PARTY' | 'cTERMINATED'
+;
+
+oEvent:
+	oblEvent=OblEvent '(' oblName=[Obl] ')'
+;
+
+OblEvent:
+	'oTRIGGERED' | 'oACTIVATED' | 'oSUSPENDED' | 'oRESUMED' | 'oDISCHARGED' 
+	| 'oEXPIRED' | 'oFULFILLED' | 'oVIOLATED' | 'oTERMINATED'
+;
+
+
+PointConst:
+	{PointConst} Type = INT
+;
+
+oState:
+	oblState=OblState '(' oblName=[Obl] ')'
+;
+
+OblState:
+	'oCREATE' | 'oINEFFECT' | 'oSUSPENSION' | 'oSUCCESSFUL_TERMINATION' 
+	| 'oUNSUCCESSFUL_TERMINATION' | 'oVIOLATION' | 'oFULFILLMENT' | 'oDISCHARGE'
+;
+
+cState:
+	contrState=ContrState '(' contractName=[Contract] ')'
+;
+
+ContrState:
+	'cFORM' | 'cINEFFECT' | 'cSUSPENSION' | 'cSUCCESSFUL_TERMINATION' 
+	| 'cUNSECCESSFUL_TERMINATION' | 'cUNASSIGN'
+;
+
+Pow:
+	name=ID ':' (trigger=Prop '->')? 'P' '(' roles+=Name ',' roles+=Name ','
+	antecedents+=Prop ',' consequents+=Prop ')'
+;
+
+pState:
+	powState=PowState '(' powName=[Pow] ')'
+;
+
+PowState:
+	'pCREATE' | 'pINEFFECT' | 'pSUSPENSION' | 'pSUCCESSFUL_TERMINATION' 
+	| 'pUNSUCCESSFUL_TERMINATION'
+;
+
+SetExp:
+	'self.''obligation.instance' | 'self.''power.instance'
+;
