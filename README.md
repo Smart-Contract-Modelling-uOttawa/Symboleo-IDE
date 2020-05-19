@@ -2,7 +2,7 @@
 An IDE for the formal contract specification Symboleo is created using [Xtext](https://www.eclipse.org/Xtext/).
 
 # What is Symboleo?
-One line explanation.
+Symboleo is a formal contract specification language developed by [Contract Specification and Modelling (CSM) Lab](https://sites.google.com/uottawa.ca/csmlab/) at Univeristy of Ottawa EECS department. The language aims to enable normative monitoring of smart contracts. Smart contracts are contracts that can monitor their performance (execution). They are a Cyber Physical System (CPS) that utilizes immutable ledgers (such as Distributed Ledger Technology (DLT) Platforms, a.k.a. blockchains).
 
 # Current State
 The current version of the text editor created by Xtext has implemented the syntax of Symboleo. It provides the capability to write Symboleo contract specifications more easily (autofill and syntax highlighting).
