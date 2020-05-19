@@ -1,0 +1,9 @@
+grammar org.xtext.CSMLab.symboleo.Symboleo with org.eclipse.xtext.common.Terminals
+
+generate symboleo "http://www.xtext.org/CSMLab/symboleo/Symboleo"
+
+Model:
+	greetings+=Greeting*;
+	
+Greeting:
+	'Hello' name=ID '!';
