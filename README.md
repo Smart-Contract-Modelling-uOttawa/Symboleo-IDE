@@ -1,3 +1,5 @@
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE) 
+
 # Symboleo Text Editor
 An IDE for the formal contract specification Symboleo is created using [Xtext](https://www.eclipse.org/Xtext/) DSL generator.
 For installating the IDE, please take a look at the [installation guide](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/INSTALL.md).
