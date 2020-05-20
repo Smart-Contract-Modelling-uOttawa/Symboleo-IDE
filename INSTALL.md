@@ -6,7 +6,7 @@ These instructions should include notes on what output to expect, which confirms
 - Xtext v2.19.0 or newer.
 
 ## Instructions
-- Clone the repository and add it to your eclipse workspace.
+- Clone the master branch of the repository and add it to your eclipse workspace.
 - Right-click on `org.xtext.csmLab.symboleo/src/org/xtext/csmLab/symboleo/Symboleo.xtext`> Run As> `Generate Xtext Artifacts`.
 - After running the workflow, the final command that illustrates successful build is: `[main] INFO  .emf.mwe2.runtime.workflow.Workflow  - Done.`
 - To experience Symboleo IDE in action, right-click on `Symboleo-IDE/org.xtext.csmLab.symboleo` folder> Run As> `Eclipse Application`.
