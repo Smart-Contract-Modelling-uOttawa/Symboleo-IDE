@@ -11,10 +11,8 @@ DomainSpec:
 ;
 
 DConcept:
-	name=ID ('isA' conceptTypes+=CType) ('with')? 
-	(attributes+=Att ',')* (attributes+=Att)?
-	| name=ID 'isA' 'Enumeration' '(' (enumerationItems+=enumItem ',')* 
-	enumerationItems+=enumItem ')'
+	name=ID ('isA' conceptTypes+=CType) ('with')? (attributes+=Att ',')* (attributes+=Att)?
+	| name=ID 'isA' 'Enumeration' '(' (enumerationItems+=enumItem ',')* enumerationItems+=enumItem ')'
 ;
 
 enumItem:
@@ -58,20 +56,19 @@ Param:
 ;
 
 Declar:
-	Pair 'with' (names+=Name ':=' names+=Name ',')* 
-	(names+=Name ':=' names+=Name)
+	DeclarPair 'with' (names+=Name ':=' names+=Name ',')* (names+=Name ':=' names+=Name)
 ;
 
 DeclarPair:
 	name=ID ':' typeNames+=TypeName
 ;
 
-TypeName:
-	name=ID | {TypeName} BasicType
-;
-
 Pair:
 	name=ID ':' types+=CType
+;
+
+TypeName:
+	name=ID | {TypeName} BasicType 
 ;
 
 Obl:
