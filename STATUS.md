@@ -1,2 +1,3 @@
-What kind of badge you are applying for (one of reusable, available, replicated, reproduced) as well as the reasons why you think your artifact deserves that badge.
-Maybe Available (reusable may be too much and the other two might not apply). More deliberation required.
+We are applying for the RE'20 *Artifacts Available* badge. 
+
+The reason for it being, the *replicated* and *reproduced* badges do not apply to our artifact. Additionally, the artifacts have yet to pass extensive testing and the documents for them are not complete. Therefore, we are not applying for the *reusable* badge either.
