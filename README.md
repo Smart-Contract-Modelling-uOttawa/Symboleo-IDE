@@ -1,4 +1,6 @@
 # Symboleo Text Editor
+[![DOI](https://zenodo.org/badge/263478039.svg)](https://zenodo.org/badge/latestdoi/263478039)
+
 An IDE for the formal contract specification Symboleo is created using [Xtext](https://www.eclipse.org/Xtext/) DSL generator.
 For installating and using the IDE, please take a look at the [installation guide](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/INSTALL.md).
 
