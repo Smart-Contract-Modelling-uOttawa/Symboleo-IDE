@@ -1,2 +1,4 @@
-What kind of badge you are applying for (one of reusable, available, replicated, reproduced) as well as the reasons why you think your artifact deserves that badge.
-Maybe Available (reusable may be too much and the other two might not apply). More deliberation required.
+We are applying for the RE'20 *Artifacts Available* badge as the package is functional and 
+accessible through the following doi:
+
+We are also applying for the *Artifacts Reusable* badge as we have demonstrated how the tool can be used to formally specify contracts in [our paper](https://drive.google.com/file/d/1WXwXeLrZdaJjhSJcCrt_wBXxDvhFkq2k/view).
