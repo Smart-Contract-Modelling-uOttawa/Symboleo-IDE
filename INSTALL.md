@@ -17,7 +17,7 @@ Please follow the instructions below.
 - System will prompt you to convert the project as a Xtext project, you should accept that for the Symboleo editor to work.
 - Paste the text of the sample Sales-of-Goods contract (`samples/sogContract.txt`) in your Symboleo file. You should see keywords bolded.
 ![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/samples/sogOutput.png "Sales-of-Goods contract specified in Symboleo text editor")
-- Now you can specify contracts in Symboleo and enjoy its syntax highlighting and autofill capabilities!
+- Now you can specify contracts in Symboleo and enjoy its syntax highlighting and autofill capabilities! (Note: by default in Eclipse, you need to enter `Ctrl` + `Space` to use autofill).
 
 ### 2nd approach: Building an xtext project in Eclipse (this approach will work for sure!)
 - Open an xtext project from **File | Project | Xtext Project**:
@@ -36,4 +36,4 @@ Make sure that the extension file is `.symboleo`.
 - System will prompt you to convert the project as a Xtext project, you should accept that for the Symboleo editor to work.
 - Paste the text of the sample Sales-of-Goods contract (`Symboleo-IDE/samples/sogContract.txt`) in your `.symboleo` file. You should see keywords bolded.
 ![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/samples/sogOutput.png "Sales-of-Goods contract specified in Symboleo text editor")
-- Now you can specify contracts in Symboleo and enjoy its syntax highlighting and autofill capabilities!
+- Now you can specify contracts in Symboleo and enjoy its syntax highlighting and autofill capabilities! (Note: by default in Eclipse, you need to enter `Ctrl` + `Space` to use autofill).
