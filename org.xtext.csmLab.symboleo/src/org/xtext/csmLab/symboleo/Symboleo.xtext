@@ -7,7 +7,7 @@ ContractSpec:
 ;
 	
 DomainSpec:
-	'Domain' name=ID (dConcepts += DConcept ';')+ (ctypes+=CType)? 'endDomain'
+	'Domain' name=ID (dConcepts += DConcept ';')+ 'endDomain'
 ;
 
 DConcept:
