@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<?eclipse version="3.0"?>
+<plugin>
+	<extension point="org.eclipse.emf.ecore.generated_package">
+		<package
+			uri = "http://www.uottawa.ca/csmlab/symboleo/Symboleo"
+			class = "ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage"
+			genModel = "model/generated/Symboleo.genmodel" />
+	</extension>
+</plugin>

@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Automatic-Module-Name: ca.uottawa.csmlab.symboleo.ide
+Bundle-ManifestVersion: 2
+Bundle-Name: ca.uottawa.csmlab.symboleo.ide
+Bundle-Vendor: My Company
+Bundle-Version: 1.0.0.qualifier
+Bundle-SymbolicName: ca.uottawa.csmlab.symboleo.ide; singleton:=true
+Bundle-ActivationPolicy: lazy
+Require-Bundle: ca.uottawa.csmlab.symboleo,
+ org.eclipse.xtext.ide,
+ org.eclipse.xtext.xbase.ide,
+ org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Export-Package: ca.uottawa.csmlab.symboleo.ide.contentassist.antlr.internal,
+ ca.uottawa.csmlab.symboleo.ide.contentassist.antlr

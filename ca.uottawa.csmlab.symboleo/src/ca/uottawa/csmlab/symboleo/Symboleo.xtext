@@ -1,0 +1,368 @@
+grammar ca.uottawa.csmlab.symboleo.Symboleo with org.eclipse.xtext.common.Terminals
+
+generate symboleo "http://www.uottawa.ca/csmlab/symboleo/Symboleo"
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+
+Model:
+	'Domain' domainName=ID
+	(domainTypes += DomainType ';')+ 
+	'endDomain'
+	'Contract' contractName=ID '(' (parameters+=Parameter ',')+ (parameters+=Parameter) ')'
+	('Declarations' (variables+=Variable ';')*)?
+//	('Preconditions' (preconditions+=Proposition';')*)?
+//	('Postconditions' (postconditions+=Proposition ';')*)?
+	('Obligations'(obligations+=Obligation ';')*)+
+	('Surviving''Obligations' (survivingObligations+=Obligation ';')*)?
+	('Powers'(powers+=Power ';')*)?
+//	('Constraints' (constraints+=Proposition ';')*)?
+	'endContract'
+;
+
+DomainType:
+	Alias | Regular | Enumeration
+;
+
+Alias:
+	name=ID 'isA' type=BaseType
+;
+
+Enumeration:
+	name=ID 'isAn''Enumeration''('(enumerationItems+=EnumItem ',')* (enumerationItems+=EnumItem)')'
+;
+
+EnumItem:
+	name=ID
+;
+// TODO not extend itself, prevent cycles
+Regular:
+	name=ID ('isA'|'isAn') ontologyType=OntologyType ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
+	name=ID ('isA'|'isAn') regularType=[Regular] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?
+;
+
+Attribute:
+	name=ID ':' baseType=BaseType |
+	name=ID ':' domainType=[DomainType]
+;
+
+BaseType:
+	name=("Number" | "String" | "Date" | "Boolean")
+;
+
+OntologyType:
+	name=("Asset" | "Event" | "Role" | "Contract")
+;
+
+Parameter:
+	name=ID ':' type=ParameterType
+;
+
+ParameterType:
+	 baseType=BaseType | 
+	 domainType=[DomainType]
+;
+
+Variable:
+	name=ID ':' type=[Regular] ('with' attributes+=Assignment (',' attributes+=Assignment )*)?
+;
+
+
+// TODO name should be from the attributes of the used type
+// TODO assign from parameters and variables
+// TODO check assigned type is correct
+Assignment:
+	{AssingParameter} name=ID ':=' values=[Parameter] |
+	AssignmentB
+;
+
+AssignmentB:
+	{AssignVariable} name=ID ':=' valude=[Variable] |
+	AssignmentC
+;
+
+AssignmentC:
+	{AssingExpression} name=ID ':=' valaue=Expression
+;
+
+
+Double returns ecore::EDouble:
+    INT '.' INT
+;
+
+// TODO boolean expressions
+// TODO time expressions
+// TODO dot expressions
+Expression:
+	NumericExpression | StringExpression
+;
+
+NumericExpression:
+	Addition;
+
+Addition returns NumericExpression:
+	Multiplication (({Plus.left=current} '+' | {Minus.left=current} '-') right=Multiplication)*;
+
+Multiplication returns NumericExpression:
+	PrimaryExpression (({Multi.left=current} '*' | {Div.left=current} '/') right=PrimaryExpression)*;
+
+// TODO fields from declared variables (?)
+// TODO declared variables, dot exp
+PrimaryExpression returns NumericExpression:
+	'(' NumericExpression ')' |
+	{NumericExpressionDouble} value=Double |
+	{NumericExpressionInt} value=INT |
+	{NumericExpressionParameter} value=[Parameter] |
+	{NumericExpressionFunction} function=MathFunction
+;
+
+MathFunction:
+	name=('Math.pow') '(' arg1=NumericExpression ',' arg2=NumericExpression ')'|
+	name=('Math.abs') '(' arg1=NumericExpression ')' |
+	name=('Math.floor') '(' arg1=NumericExpression ')'
+;
+
+StringExpression: 
+	{StringExpressionValue} value=STRING | 
+	{StringExpressionParameter} parameter=[Parameter] |
+	{StringExpressionFunction} function=StringFunction
+;
+
+StringFunction:
+	name=('String.concatenate') '(' arg1=StringExpression ',' arg2=StringExpression ')'|
+	name=('String.lowerCase') '(' arg1=StringExpression ')'
+;
+
+// TODO connect debtor and creditor to variables
+Obligation:
+	name=ID ':' ( trigger=Proposition '->')? ('O'|'Obligation')'('debtor=ID','creditor=ID','antecedent=Proposition','consequent=Proposition')'
+;
+
+Power:
+	name=ID ':' ( trigger=Proposition '->')? ('P'|'Power')'('creditor=ID','debtor=ID','antecedent=Proposition','consequent=Proposition')'
+;
+
+Proposition:
+	junctions+=Junction ('or' junctions+=Junction)*	
+;
+
+Junction:
+	negativeAtoms += Negation ('and' negativeAtoms += Negation)*
+;
+
+Negation:
+	negated ?= ('not')? atomicExpression=Atom
+;
+
+Atom:
+	predicateFunction = PredicateFunction
+//	| 'occurs''('situationProposition=SitProp')'
+	| '('inner = Proposition')'
+//	| point=Point 'within' interval=Interval
+	| bool = 'true'
+	| bool = 'false'
+;
+
+PredicateFunction:
+	name = 'Happens' '('event = Event')' |
+	name = 'HappensBefore' '('event = Event ',' point = Point')'  |
+	name = 'HappensAfter' '('event = Event ',' point = Point')' |
+	name = 'HappensWithin' '('event = Event ',' interval = Interval')'
+;
+
+Event:
+	{VariableEvent} variable = [Variable]
+	| obligationEvent = ObligationEvent
+	| contractEvent = ContractEvent
+	| powerEvent = PowerEvent
+;
+
+PowerEvent:
+	eventName = PowerEventName '(' powerVariable=[Power] ')'
+;
+
+PowerEventName:
+	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Exerted' | 'Expired' | 'Terminated'
+;
+
+ObligationEvent:
+	eventName = ObligationEventName '(' obligationVariable=[Obligation] ')'
+;
+
+ObligationEventName:
+	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' | 'Terminated'
+;
+
+ContractEvent:
+	eventName = ContractEventName '(' 'self' ')'
+;
+ContractEventName:
+	'Activated' | 'Suspended' | 'Resumed' | 'FuflfilledObligations' | 'RevokedParty' | 'AssignedParty' | 'Terminated' | 'Rescinded'
+;
+
+Point:
+	pointExpression = PointExpression
+;
+
+PointExpression:
+	pointFunction = PointFunction |
+	pointAtom = PointAtom
+;
+
+PointFunction:
+	name = PointFunctionName '(' pointExpression = PointExpression ',' value = Timevalue ',' timeUnit = TimeUnit ')'
+;
+
+PointFunctionName:
+	'addTime'
+;
+
+PointAtom:
+	{PointAtomParameter} parameter = [Parameter] | // TODO only date values 
+	{PointAtomVariablePath} variable = [Variable]'.'propertyPath+=ID('.'propertyPath+=ID)* |
+//	{PointAtomVariableDotExpressio} variableDotExpression = VariableDotExpression |
+	{PointAtomObligationEvent} obligationEvent = ObligationEvent |
+	{PointAtomContractEvent} contractEvent = ContractEvent|
+	{PointAtomPowerEvent} powerEvent = PowerEvent
+;
+
+//VariableDotExpression returns Ref:
+//    VariableRef ({VariableDotExpression.ref=current}  "." tail=[Attribute])*
+//;
+// 
+//VariableRef returns Ref:
+//    {VariableRef} entity=[Variable]
+//; 
+
+Timevalue:
+	value = INT | 
+	parameter = [Parameter] | // TODO only integer values
+	variable = [Variable]'.'propertyPath+=ID('.'propertyPath+=ID)* // TODO dot expression
+;
+
+TimeUnit:
+	'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years'
+;
+
+Interval:
+	intervalExpression = IntervalExpression
+;
+
+IntervalExpression:
+	intervalFunction = IntervalFunction |
+	intervalAtom = IntervalAtom
+;
+
+IntervalFunction:
+	name = IntervalFunctionName '(' pointExpression = PointExpression ',' pointExpression2 = PointExpression ')'
+;
+
+IntervalFunctionName:
+	'Interval'
+;
+
+IntervalAtom:
+	obligationState = ObligationState |
+	contractState = ContractState |
+	powerState = PowerState
+;
+
+PowerState:
+	eventName = PowerStateName '(' powerVariable=[Power] ')'
+;
+
+PowerStateName:
+	'Create' | 'UnsuccessfulTermination' | 'Active' | 'InEffect' | 'Suspension' | 'SuccessfulTermination'
+;
+
+ObligationState:
+	eventName = ObligationStateName '(' obligationVariable=[Obligation] ')'
+;
+
+ObligationStateName:
+	'Create' | 'Discharge' | 'Active' | 'InEffect' | 'Suspension' | 'Violation' | 'Fulfillment' | 'UnsuccessfulTermination'
+;
+
+ContractState:
+	eventName = ContractStateName '(' 'self' ')'
+;
+
+ContractStateName:
+	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active'
+;
+        
+//SitProp:
+//	(situationName = ID
+//	| oSituationName = oState 
+//	| cSituationName = cState 
+//	| pSituationName = pState) ',' interval=Interval
+//;
+
+//Interval:
+//	situationName=SitName | '[' start=Point ',' end=Point ']'
+//	| unnamed='UNNAMED_INTERVAL' 
+//	| RelativeSituationPointBefore
+//	| RelativeSituationPointAfter
+//;
+
+//RelativeSituationPointBefore:
+//	(intConst=IntConst)(unit=Unit)(tempOp=TempOp)(situationName=SitName)
+//;
+//
+//RelativeSituationPointAfter:
+//	(situationName=SitName)(tempOp=TempOp)(intConst=IntConst)(unit=Unit)
+//;
+//
+//SitName:
+//	(declName = ID | oState=oState | pState=pState | cState=cState 
+//	| oEvent=ObligationEvent | cEvent=ContractEvent | pEvent=PowerEvent)
+//;
+//
+
+//
+//IntConst:
+//	{IntConst} Type = INT
+//;
+//
+//TempOp:
+//	'BEFORE' | 'AFTER' | 'AT' | 'WITHIN' | '+' | '-'
+//;
+
+
+//RelativeEventPointBefore:
+//	(pointConst=PointConst)(unit=Unit)(tempOp=TempOp)(eventName=SitName)
+//;
+//
+//RelativeEventPointAfter:
+//	(eventName=SitName)(tempOp=TempOp)(unit=Unit)(pointConst=PointConst)
+//;
+//
+//PointConst:
+//	{PointConst} Type = INT
+//;
+//
+//oState:
+//	oblState=OblState '(' oblName=ID ')'
+//;
+//
+//OblState:
+//	'oCREATE' | 'oINEFFECT' | 'oSUSPENSION'
+//	| 'oUNSUCCESSFUL_TERMINATION' | 'oVIOLATION' | 'oFULFILLMENT' | 'oDISCHARGE'
+//;
+//
+//cState:
+//	contrState=ContrState '(' contractName=ID ')'
+//;
+//
+//ContrState:
+//	'cFORM' | 'cINEFFECT' | 'cSUSPENSION' | 'cSUCCESSFUL_TERMINATION' 
+//	| 'cUNSECCESSFUL_TERMINATION' | 'cUNASSIGN'
+//;
+//
+//
+//pState:
+//	powState=PowState '(' powName=ID ')'
+//;
+//
+//PowState:
+//	'pCREATE' | 'pINEFFECT' | 'pSUSPENSION' | 'pSUCCESSFUL_TERMINATION' 
+//	| 'pUNSUCCESSFUL_TERMINATION'
+//;

@@ -1,0 +1,29 @@
+Manifest-Version: 1.0
+Automatic-Module-Name: ca.uottawa.csmlab.symboleo
+Bundle-ManifestVersion: 2
+Bundle-Name: ca.uottawa.csmlab.symboleo
+Bundle-Vendor: My Company
+Bundle-Version: 1.0.0.qualifier
+Bundle-SymbolicName: ca.uottawa.csmlab.symboleo; singleton:=true
+Bundle-ActivationPolicy: lazy
+Require-Bundle: org.eclipse.xtext,
+ org.eclipse.xtext.xbase,
+ org.eclipse.equinox.common;bundle-version="3.5.0",
+ org.eclipse.emf.ecore,
+ org.eclipse.xtext.xbase.lib;bundle-version="2.14.0",
+ org.eclipse.xtext.util,
+ org.eclipse.emf.common,
+ org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Export-Package: ca.uottawa.csmlab.symboleo.symboleo.impl,
+ ca.uottawa.csmlab.symboleo.parser.antlr.internal,
+ ca.uottawa.csmlab.symboleo.services,
+ ca.uottawa.csmlab.symboleo.scoping,
+ ca.uottawa.csmlab.symboleo.symboleo,
+ ca.uottawa.csmlab.symboleo.symboleo.util,
+ ca.uottawa.csmlab.symboleo.parser.antlr,
+ ca.uottawa.csmlab.symboleo.serializer,
+ ca.uottawa.csmlab.symboleo,
+ ca.uottawa.csmlab.symboleo.validation,
+ ca.uottawa.csmlab.symboleo.generator
+Import-Package: org.apache.log4j
