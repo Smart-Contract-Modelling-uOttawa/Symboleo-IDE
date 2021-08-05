@@ -19,7 +19,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.Obligation;
 import ca.uottawa.csmlab.symboleo.symboleo.OntologyType;
 import ca.uottawa.csmlab.symboleo.symboleo.Parameter;
 import ca.uottawa.csmlab.symboleo.symboleo.Power;
-import ca.uottawa.csmlab.symboleo.symboleo.Regular;
+import ca.uottawa.csmlab.symboleo.symboleo.RegularType;
 import ca.uottawa.csmlab.symboleo.symboleo.StringExpressionParameter;
 import ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage;
 import ca.uottawa.csmlab.symboleo.symboleo.Variable;
@@ -90,38 +90,38 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
     }
   }
   
-  @Check(CheckType.FAST)
-  public void checkvariableEventsType(VariableEvent event) {    
-    if (event.getVariable() == null) {
-      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
-      return;
-    }
-    
-    Regular currentType = event.getVariable().getType();
-    while(true) {
-      if(currentType.getRegularType() == null) {
-        break;
-      }
-      currentType = currentType.getRegularType();
-    }
-    
-    if (!currentType.getOntologyType().getName().equalsIgnoreCase("event")) {
-      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
-    }
-  }
+//  @Check(CheckType.FAST)
+//  public void checkVariableEventsType(VariableEvent event) {    
+//    if (event.getVariable() == null) {
+//      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
+//      return;
+//    }
+//    
+//    RegularType currentType = event.getVariable().getType();
+//    while(true) {
+//      if(currentType.getRegularType() == null) {
+//        break;
+//      }
+//      currentType = currentType.getRegularType(); 
+//    }
+//    
+//    if (!currentType.getOntologyType().getName().equalsIgnoreCase("event")) {
+//      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
+//    }
+//  }
   
-  @Check(CheckType.FAST)
-  public void checkNumericExpressionParameterType(NumericExpressionParameter np) {
-    if (np.getValue().getType().getBaseType() == null || !np.getValue().getType().getBaseType().getName().equalsIgnoreCase("number")) {
-      error("Should be of type number", np, SymboleoPackage.Literals.NUMERIC_EXPRESSION_PARAMETER__VALUE);
-    }
-  }
-
-  @Check(CheckType.FAST)
-  public void checkStringExpressionParameterType(StringExpressionParameter np) {
-    if (np.getParameter().getType().getBaseType() == null || !np.getParameter().getType().getBaseType().getName().equalsIgnoreCase("string")) {
-      error("Should be of type string", np, SymboleoPackage.Literals.STRING_EXPRESSION_PARAMETER__PARAMETER);
-    }
-  }
+//  @Check(CheckType.FAST)
+//  public void checkNumericExpressionParameterType(NumericExpressionParameter np) {
+//    if (np.getValue().getType().getBaseType() == null || !np.getValue().getType().getBaseType().getName().equalsIgnoreCase("number")) {
+//      error("Should be of type number", np, SymboleoPackage.Literals.NUMERIC_EXPRESSION_PARAMETER__VALUE);
+//    }
+//  }
+//
+//  @Check(CheckType.FAST)
+//  public void checkStringExpressionParameterType(StringExpressionParameter np) {
+//    if (np.getParameter().getType().getBaseType() == null || !np.getParameter().getType().getBaseType().getName().equalsIgnoreCase("string")) {
+//      error("Should be of type string", np, SymboleoPackage.Literals.STRING_EXPRESSION_PARAMETER__PARAMETER);
+//    }
+//  }
 	
 }

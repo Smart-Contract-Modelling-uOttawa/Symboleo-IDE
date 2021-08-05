@@ -3,36 +3,106 @@
  */
 package ca.uottawa.csmlab.symboleo.scoping;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.scoping.IScope;
+import org.eclipse.xtext.scoping.Scopes;
 
-import ca.uottawa.csmlab.symboleo.symboleo.PointAtomVariablePath;
+import ca.uottawa.csmlab.symboleo.symboleo.Attribute;
+import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
+import ca.uottawa.csmlab.symboleo.symboleo.Model;
+import ca.uottawa.csmlab.symboleo.symboleo.OntologyType;
+import ca.uottawa.csmlab.symboleo.symboleo.Parameter;
+import ca.uottawa.csmlab.symboleo.symboleo.Ref;
+import ca.uottawa.csmlab.symboleo.symboleo.RegularType;
 import ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage;
+import ca.uottawa.csmlab.symboleo.symboleo.Variable;
+import ca.uottawa.csmlab.symboleo.symboleo.VariableDotExpression;
+import ca.uottawa.csmlab.symboleo.symboleo.VariableRef;
 
 /**
  * This class contains custom scoping description.
  * 
- * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
+ * See
+ * https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
  * on how and when to use it.
  */
 public class SymboleoScopeProvider extends AbstractSymboleoScopeProvider {
-  
-//  @Override
-//  public IScope getScope(EObject context, EReference reference) {
-//      // We want to define the Scope for the Element's superElement cross-reference
-//      if (context instanceof PointAtomVariablePath
-//              && reference == SymboleoPackage.Literals.POINT_ATOM_PArA) {
-//          // Collect a list of candidates by going through the model
-//          // EcoreUtil2 provides useful functionality to do that
-//          // For example searching for all elements within the root Object's tree
+
+  @Override
+  public IScope getScope(EObject context, EReference reference) {
+    if (context instanceof VariableDotExpression) {
+//              && reference == SymboleoPackage.Literals.PARAMETER_DOT_EXPRESSION__PARAMETER_REF) {
+      // Collect a list of candidates by going through the model
+      // EcoreUtil2 provides useful functionality to do that
+      // For example searching for all elements within the root Object's tree
 //          EObject rootElement = EcoreUtil2.getRootContainer(context);
 //          List<Element> candidates = EcoreUtil2.getAllContentsOfType(rootElement, Element.class);
-//          // Create IEObjectDescriptions and puts them into an IScope instance
-//          return Scopes.scopeFor(candidates);
-//      }
-//      return super.getScope(context, reference);
-//  }
+      // Create IEObjectDescriptions and puts them into an IScope instance
 
+      
+      Model root = (Model) EcoreUtil2.getRootContainer(context);
+      VariableDotExpression e = (VariableDotExpression) context;
+      Ref head = e.getRef();
+      if (head instanceof VariableDotExpression) {
+        VariableDotExpression dotExp = (VariableDotExpression) head;
+
+        if (dotExp.getTail().getDomainType() != null) {
+          DomainType domainType = dotExp.getTail().getDomainType();
+          if (domainType != null && domainType instanceof RegularType) {
+            RegularType type = (RegularType) domainType;
+            return Scopes.scopeFor(getAttributesOfRegularType(type));
+          }
+        }
+      } else if (head instanceof VariableRef) {
+        VariableRef ref = (VariableRef) head;
+        if (ref != null) {
+          String id = ref.getVariable();
+          // search parameters
+          List<Parameter> parameters = root.getParameters().stream().filter(item -> item.getName().equals(id))
+              .collect(Collectors.toList());
+          if (parameters.size() > 0) {
+            Parameter paramter = parameters.get(0);
+            DomainType domainType = paramter.getType().getDomainType();
+            if (domainType != null && domainType instanceof RegularType) {
+              RegularType type = (RegularType) domainType;
+              return Scopes.scopeFor(getAttributesOfRegularType(type));
+            }
+          } else {
+            // search variables
+            List<Variable> variables = root.getVariables().stream().filter(item -> item.getName().equals(id))
+                .collect(Collectors.toList());
+            if (variables.size() > 0) {
+              Variable variable = variables.get(0);
+              DomainType domainType = variable.getType();
+              if (domainType != null && domainType instanceof RegularType) {
+                RegularType type = (RegularType) domainType;
+                return Scopes.scopeFor(getAttributesOfRegularType(type));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return super.getScope(context, reference);
+  }
+
+  private List<Attribute> getAttributesOfRegularType(RegularType type) {
+    List<Attribute> attributes = new ArrayList<>();
+    attributes.addAll(type.getAttributes());
+    while (type.getRegularType() != null) {
+      type = type.getRegularType();
+      attributes.addAll(type.getAttributes());
+    }
+    return attributes;
+  }
 
 }
