@@ -30,6 +30,7 @@ EnumItem:
 	name=ID;
 
 // TODO not extend itself, prevent cycles
+// TODO check attribute names to be unique, (parent classes)
 RegularType:
 	name=ID ('isA' | 'isAn') ontologyType=OntologyType ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
 	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?;
@@ -111,7 +112,6 @@ PrimaryExpression returns Expression:
 	AtomicExpression
 ;
 
-// TODO VariableDotExpression
 AtomicExpression returns Expression:
 	{AtomicExpressionDouble} value=Double |
 	{AtomicExpressionInt} value=INT |
@@ -184,7 +184,6 @@ PredicateFunction:
 	name='CannotBeAssigned' '(' arg1=ID ')'
 	;
 
-// TODO ParameterDotExpression
 Event:
 	{VariableEvent} variable=VariableDotExpression
 	| obligationEvent=ObligationEvent
@@ -225,7 +224,6 @@ PointFunctionName:
 	'addTime';
 
 PointAtom:
-//	{PointAtomParameter} parameter=[Parameter] | // TODO only date values 
 	{PointAtomParameterDotExpression} variable=VariableDotExpression | 
 	{PointAtomObligationEvent} obligationEvent=ObligationEvent |
 	{PointAtomContractEvent} contractEvent=ContractEvent |
@@ -234,8 +232,7 @@ PointAtom:
 
 Timevalue:
 	value=INT |
-	parameter=[Parameter] | // TODO only integer values
-	variable=[Variable] '.' propertyPath+=ID ('.' propertyPath+=ID)* // TODO dot expression
+	variable=VariableDotExpression // TODO check type of variable
 ;
 
 TimeUnit:
