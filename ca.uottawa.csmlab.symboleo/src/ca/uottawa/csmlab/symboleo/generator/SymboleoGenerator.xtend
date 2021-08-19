@@ -7,47 +7,73 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-//import ca.uottawa.csmlab.symboleo.symboleo.Model
-//import ca.uottawa.csmlab.symboleo.symboleo.Obligation
-//import ca.uottawa.csmlab.symboleo.symboleo.Proposition
-//import ca.uottawa.csmlab.symboleo.symboleo.Junction
-//import ca.uottawa.csmlab.symboleo.symboleo.Negation
-//import ca.uottawa.csmlab.symboleo.symboleo.Atom
-//import ca.uottawa.csmlab.symboleo.symboleo.EventProp
-//import ca.uottawa.csmlab.symboleo.symboleo.SitProp
-//import ca.uottawa.csmlab.symboleo.symboleo.oEvent
-//import ca.uottawa.csmlab.symboleo.symboleo.cEvent
-//import ca.uottawa.csmlab.symboleo.symboleo.pEvent
-//import ca.uottawa.csmlab.symboleo.symboleo.oState
-//import ca.uottawa.csmlab.symboleo.symboleo.cState
-//import ca.uottawa.csmlab.symboleo.symboleo.pState
-//import ca.uottawa.csmlab.symboleo.symboleo.SitName
-//import ca.uottawa.csmlab.symboleo.symboleo.Point
-//import ca.uottawa.csmlab.symboleo.symboleo.Power
-//import ca.uottawa.csmlab.symboleo.symboleo.Interval
-//import java.util.HashMap
-//import ca.uottawa.csmlab.symboleo.symboleo.Regular
-//import ca.uottawa.csmlab.symboleo.symboleo.Enumeration
-//import ca.uottawa.csmlab.symboleo.symboleo.DomainType
-//import ca.uottawa.csmlab.symboleo.symboleo.BasicType
-//import ca.uottawa.csmlab.symboleo.symboleo.OntoCType
-//import java.util.ArrayList
-//import java.util.HashSet
-//import java.lang.Math;
-//import ca.uottawa.csmlab.symboleo.symboleo.RelativeEventPointBefore
-//import ca.uottawa.csmlab.symboleo.symboleo.RelativeEventPointAfter
-//import ca.uottawa.csmlab.symboleo.symboleo.RelativeSituationPointBefore
-//import ca.uottawa.csmlab.symboleo.symboleo.RelativeSituationPointAfter
-//
-//import org.eclipse.emf.ecore.resource.Resource
-//import org.eclipse.xtext.generator.AbstractGenerator
-//import org.eclipse.xtext.generator.IFileSystemAccess2
-//import org.eclipse.xtext.generator.IGeneratorContext
-//import ca.uottawa.csmlab.symboleo.generator.Ontology.*
-//import ca.uottawa.csmlab.symboleo.symboleo.Basic
-//import ca.uottawa.csmlab.symboleo.symboleo.OntologyType
-//import ca.uottawa.csmlab.symboleo.symboleo.Parameter
-//import ca.uottawa.csmlab.symboleo.symboleo.Declaration
+import ca.uottawa.csmlab.symboleo.symboleo.DomainType
+import ca.uottawa.csmlab.symboleo.symboleo.RegularType
+import ca.uottawa.csmlab.symboleo.symboleo.Attribute
+import java.util.List
+import ca.uottawa.csmlab.symboleo.symboleo.Model
+import java.util.ArrayList
+import ca.uottawa.csmlab.symboleo.symboleo.Enumeration
+import ca.uottawa.csmlab.symboleo.symboleo.Parameter
+import ca.uottawa.csmlab.symboleo.symboleo.AssignVariable
+import ca.uottawa.csmlab.symboleo.symboleo.VariableRef
+import ca.uottawa.csmlab.symboleo.symboleo.Ref
+import ca.uottawa.csmlab.symboleo.symboleo.VariableDotExpression
+import ca.uottawa.csmlab.symboleo.symboleo.AssignExpression
+import ca.uottawa.csmlab.symboleo.symboleo.Expression
+import ca.uottawa.csmlab.symboleo.symboleo.And
+import ca.uottawa.csmlab.symboleo.symboleo.Or
+import ca.uottawa.csmlab.symboleo.symboleo.Equality
+import ca.uottawa.csmlab.symboleo.symboleo.Comparison
+import ca.uottawa.csmlab.symboleo.symboleo.Plus
+import ca.uottawa.csmlab.symboleo.symboleo.Minus
+import ca.uottawa.csmlab.symboleo.symboleo.Div
+import ca.uottawa.csmlab.symboleo.symboleo.Multi
+import ca.uottawa.csmlab.symboleo.symboleo.PrimaryExpressionFunctionCall
+import ca.uottawa.csmlab.symboleo.symboleo.NegatedPrimaryExpression
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionTrue
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionFalse
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDouble
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionInt
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionEnum
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionString
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionParameter
+import ca.uottawa.csmlab.symboleo.symboleo.PrimaryExpressionRecursive
+import ca.uottawa.csmlab.symboleo.symboleo.TwoArgMathFunction
+import ca.uottawa.csmlab.symboleo.symboleo.OneArgMathFunction
+import ca.uottawa.csmlab.symboleo.symboleo.TwoArgStringFunction
+import ca.uottawa.csmlab.symboleo.symboleo.OneArgStringFunction
+import ca.uottawa.csmlab.symboleo.symboleo.Obligation
+import ca.uottawa.csmlab.symboleo.symboleo.Power
+import ca.uottawa.csmlab.symboleo.symboleo.Variable
+import ca.uottawa.csmlab.symboleo.symboleo.Proposition
+import ca.uottawa.csmlab.symboleo.symboleo.POr
+import ca.uottawa.csmlab.symboleo.symboleo.PAnd
+import ca.uottawa.csmlab.symboleo.symboleo.PEquality
+import ca.uottawa.csmlab.symboleo.symboleo.NegatedPAtom
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicate
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomRecursive
+import ca.uottawa.csmlab.symboleo.symboleo.PComparison
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomVariable
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateTrueLiteral
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomPredicateFalseLiteral
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomIntLiteral
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomStringLiteral
+import java.util.Map
+import java.util.HashMap
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomDoubleLiteral
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunction
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappens
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensBefore
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensAfter
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensWithin
+import ca.uottawa.csmlab.symboleo.symboleo.Event
+import ca.uottawa.csmlab.symboleo.symboleo.VariableEvent
+import ca.uottawa.csmlab.symboleo.symboleo.PowerEvent
+import ca.uottawa.csmlab.symboleo.symboleo.ObligationEvent
+import ca.uottawa.csmlab.symboleo.symboleo.ContractEvent
+
 //
 /**
  * Generates code from your model files on save.
@@ -55,76 +81,534 @@ import org.eclipse.xtext.generator.IGeneratorContext
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class SymboleoGenerator extends AbstractGenerator {
-//	
-//	
-////	def dispatch compileDomainConceptType(DomainType dType, Contract contract, Regular dc) {
-//////		res.append(dType.superType.name + "  " + dc.name + "\n")
-//////		superTypes.put(dName, dType.superType.name)
-////	}
-////	
-////	def dispatch compileDomainConceptType(OntologyType oType, Contract contract, Regular dc) {
-////		switch (oType.name) {
-////			case "Asset": contract.addAsset(new Asset(contract, dc.name, dc.attributes))			  				
-////			case "Role": contract.addRole(new Role(contract, dc.name, dc.attributes))
-////			case "Event": contract.addEvent(new Event(contract, dc.name, dc.attributes))
-////		}
-////	}
-//	
-//	def dispatch compileDomainConcept(Regular domainConcept, Contract contract) {
-//		regularDomainsConcepts.add(domainConcept)
-//	}
-//	
-//	def dispatch compileDomainConcept(Basic domainConcept, Contract contract) {
-//		basicDomainsConcepts.add(domainConcept)
-//		
-//	}
-//	
-//	def dispatch compileDomainConcept(Enumeration domainConcept, Contract contract) {
-//		enums.add(domainConcept)
-//	}
-//	
-//	def dispatch compileDeclaration(Declaration declaration) {
-//		
-//	}
-//		
-//	def compile(Model model) {
-//		var res = new StringBuilder()
-//		var superTypes = new HashMap<String, String>()
-////		var declAttrs = new HashMap<String, ArrayList<KeyValuePair>>()
-//		
-//		var contract = new Contract(model.getContractName());
-//		for (domainConcept : model.domainConcepts) {
-//			domainConcept.compileDomainConcept(contract)	
-//		}
-//		
-//		for (parameter : model.parameters) {
-//			parameters.add(parameter)
-//		}
-//		
-//		for (declaration : model.declarations) {
-//			declaration.compileDeclaration()	
-//		}
-//		
-//		return res.toString()
-//	}
-//	
-//	var enums = new ArrayList<Enumeration>
-//	var basicDomainsConcepts = new ArrayList<Basic>
-//	var regularDomainsConcepts = new ArrayList<Regular>
-//	
-//	var parameters = new ArrayList<Parameter>
-//
-//	def void doGenerateJS(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		for (e : resource.allContents.toIterable.filter(Model)) {
-//        fsa.generateFile(
-//            e.getContractName() + ".js",
-//            compile(e))
-//		}
-//		
-//	}
-//	
+
+	val ASSET_CLASS_IMPORT_PATH = "\"../../core/Asset\""
+	val EVENT_CLASS_IMPORT_PATH = "\"../../core/Event\""
+	val ROLE_CLASS_IMPORT_PATH = "\"../../core/Role\""
+	val POWER_CLASS_IMPORT_PATH = "\"../../core/Power\""
+	val OBLIGATION_CLASS_IMPORT_PATH = "\"../../core/Obligation\""
+	val CONTRACT_CLASS_IMPORT_PATH = "\"../../core/SymboleoContract\""
+
+	val assets = new ArrayList<RegularType>
+	val events = new ArrayList<RegularType>
+	val roles = new ArrayList<RegularType>
+	val enumerations = new ArrayList<Enumeration>
+	val parameters = new ArrayList<Parameter>
+	
+	val obligations = new ArrayList<Obligation>
+	val survivingObligations = new ArrayList<Obligation>
+	val powers = new ArrayList<Power>
+	val conditionalObligations = new ArrayList<Obligation>
+	val conditionalSurvivingObligations = new ArrayList<Obligation>
+	val conditionalPowers= new ArrayList<Power>
+	
+	val eventVariables = new ArrayList<Variable>
+		
+	val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val survivingObligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
+	
+	val obligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val survivingObligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	
+
+	def void generateHFSource(IFileSystemAccess2 fsa, Model model) {
+		parse(model)
+		compileDomainTypes(fsa, model.domainTypes)
+		compileContract(fsa, model)
+		compileInitMethod(model)
+		compileTransactionFile(fsa, model)
+		
+	}
+	
+	def void parse (Model model) {
+		parameters.addAll(model.parameters)
+		
+		for (domainType : model.domainTypes) {
+			if (domainType instanceof RegularType) {
+				var RegularType base = getBaseType(domainType)
+				if (base !== null) {
+					switch base.ontologyType.name {
+						case 'Asset': assets.add(domainType as RegularType)
+						case 'Event': events.add(domainType as RegularType)
+						case 'Role': roles.add(domainType as RegularType)
+					}
+				}
+			} else if (domainType instanceof Enumeration) {
+				enumerations.add(domainType as Enumeration)
+			}
+		}
+
+		// event variables
+		for(variable: model.variables){
+			if (events.indexOf(variable.type) != -1){
+				eventVariables.add(variable)
+			}	
+		}
+		
+		// filtering conditional obligations and powers
+		for (obligation: model.obligations){
+			if (obligation.trigger === null){
+				obligations.add(obligation)
+			} else {
+				conditionalObligations.add(obligation)
+			}
+		}
+		for (obligation: model.survivingObligations){
+			if (obligation.trigger === null){
+				survivingObligations.add(obligation)
+			} else {
+				conditionalSurvivingObligations.add(obligation)
+			}
+		}
+		for (power: model.powers){
+			if (power.trigger === null){
+				powers.add(power)
+			} else {
+				conditionalPowers.add(power)
+			}
+		}
+		
+		// triggers
+		for (obligation: conditionalObligations){
+			val proposition = obligation.trigger
+			obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition))
+		}
+		for (obligation: conditionalSurvivingObligations){
+			val proposition = obligation.trigger
+			survivingObligationTriggerEvents.put(obligation, collectPropositionEvents(proposition))
+		}
+		for (power: conditionalPowers){
+			val proposition = power.trigger
+			powerTriggerEvents.put(power, collectPropositionEvents(proposition))
+		}
+		
+		for (obligation: model.obligations){
+			val proposition = obligation.trigger
+			obligationFullfilmentEvents.put(obligation, collectPropositionEvents(proposition))
+		}
+		for (obligation: model.survivingObligations){
+			val proposition = obligation.trigger
+			survivingObligationFullfilmentEvents.put(obligation, collectPropositionEvents(proposition))
+		}
+		
+	}
+	
+	
+	def void compileTriggers(Model model){
+		
+	}
+	
+	def List<PAtomPredicate> collectPropositionEvents(Proposition proposition){
+		val list = new ArrayList<PAtomPredicate>
+		switch (proposition){
+			POr: {
+				list.addAll(collectPropositionEvents(proposition.left))
+				list.addAll(collectPropositionEvents(proposition.right))
+			} 
+			PAnd: {
+				list.addAll(collectPropositionEvents(proposition.left))
+				list.addAll(collectPropositionEvents(proposition.right))
+			} 
+			PEquality: {
+				list.addAll(collectPropositionEvents(proposition.left))
+				list.addAll(collectPropositionEvents(proposition.right))
+			} 
+			PComparison: {
+				list.addAll(collectPropositionEvents(proposition.left))
+				list.addAll(collectPropositionEvents(proposition.right))
+			} 
+			PAtomRecursive: list.addAll(collectPropositionEvents(proposition.inner))
+			NegatedPAtom: list.addAll(collectPropositionEvents(proposition.negated))
+			PAtomPredicate: list.add(proposition)
+//			PAtomEnum:
+//			PAtomVariable: 
+//			PAtomPredicateTrueLiteral: 
+//			PAtomPredicateFalseLiteral: 
+//			PAtomIntLiteral: 
+//			PAtomStringLiteral: 
+		}
+		return list
+	}
+	
+	def String generatePropositionString(Proposition proposition){
+		switch (proposition){
+			POr: return generatePropositionString(proposition.left) + "||" + generatePropositionString(proposition.right) 
+			PAnd: return generatePropositionString(proposition.left) + "&&" + generatePropositionString(proposition.right) 
+			PEquality: return generatePropositionString(proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(proposition.right) 
+			PComparison: return generatePropositionString(proposition.left) + proposition.op + generatePropositionString(proposition.right)
+			PAtomRecursive: return "(" + generatePropositionString(proposition.inner) + ")"
+			NegatedPAtom: return "!(" + generatePropositionString(proposition.negated) + ")"
+			PAtomPredicate: return generatePredicateFunctionString(proposition.predicateFunction)
+			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
+			PAtomVariable: return generateDotExpressionString(proposition.variable, 'this')
+			PAtomPredicateTrueLiteral: return "true"
+			PAtomPredicateFalseLiteral: return "false" 
+			PAtomDoubleLiteral: return proposition.value.toString
+			PAtomIntLiteral: return proposition.value.toString
+			PAtomStringLiteral: return proposition.value 
+		}
+	}
+	
+	def String generatePredicateFunctionString(PredicateFunction predicate){
+		switch (predicate){
+			PredicateFunctionHappens: return '''Predicate.happens(«generateEventVariableString(predicate.event)», ts)'''
+			PredicateFunctionHappensBefore: return 'Predicate.happensBefore(e, ts)'
+			PredicateFunctionHappensAfter: return 'Predicate.happensAfter(e, ts)' 
+			PredicateFunctionHappensWithin: return 'Predicate.happensWithin(e, ts)'
+		}	
+	}
+	
+	def String generateEventVariableString(Event event){
+		switch (event){
+			VariableEvent: return generateDotExpressionString(event.variable, 'contract')
+			PowerEvent: return '''contract.powers.«event.powerVariable.name»._events.«event.eventName.toLowerCase»'''
+			ObligationEvent: return '''contract.obligations.«event.obligationVariable.name»._events.«event.eventName.toLowerCase»'''
+			ContractEvent: return '''contract._events.«event.eventName.toLowerCase»'''
+		}	
+	}
+	
+	def void compileTransactionFile(IFileSystemAccess2 fsa, Model model) {
+		val code = '''
+		import { Contract } from 'fabric-contract-api' 
+		import { ContractStates } from «CONTRACT_CLASS_IMPORT_PATH»
+		«FOR asset : assets»
+		import { «asset.name» } from "../../domain/assets/«asset.name»"
+		«ENDFOR»
+		«FOR event : events»
+		import { «event.name» } from "../../domain/events/«event.name»"
+		«ENDFOR»
+		«FOR role : roles»
+		import { «role.name» } from "../../domain/roles/«role.name»"
+		«ENDFOR»
+		«FOR enumeration : enumerations»
+		import { «enumeration.name» } from "../../domain/types/«enumeration.name»"
+		«ENDFOR»
+		
+		class HFContract extends Contract {
+			
+			«compileInitMethod(model)»
+		
+			«FOR method: compileEventTriggerMethods(model)»
+			«method»
+			
+			«ENDFOR»
+		}
+		'''
+		fsa.generateFile("./transactions/" + model.contractName + ".js", code)
+	}
+	
+	def List<String> compileEventTriggerMethods (Model model) {
+		val methods = new ArrayList<String>
+		for(variable: eventVariables){
+			methods.add('''
+			async trigger_«variable.name»(ctx, contractId, event) {
+			    const contractState = await ctx.stub.getState(contractId)
+			    if (contractState == null) {
+			      return {successful: false}
+			    }
+			    const contract = demarsheller(contractState)
+			
+			    if (contract.isInEffect()) {
+			
+			      contract.«variable.name».happen(event)
+			      // sendEvent(new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.happened, '«variable.name»'))
+			
+			      await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contractState)))
+			      return {successful: true}
+			    } else {
+			    	return {successful: false}
+			    }
+			  }
+			  ''')
+		  }
+		  return methods
+	}
+	
+	def String compileInitMethod (Model model) {
+		val code = '''
+		async Init(ctx, «model.parameters.map[Parameter p | p.name].join(',')») {
+		    const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | p.name].join(',')»)
+		
+		    if (contractInstance.activated()) {
+		    	«FOR obligation: obligations»
+		    	contractInstance.obligations.«obligation.name».trigerredUnconditional()
+		    	«ENDFOR»
+		    	«FOR power: powers»
+		    	contractInstance.powers.«power.name».trigerredUnconditional()
+		    	«ENDFOR»
+		
+		      await ctx.stub.putState(contractInstance.id, Buffer.from(JSON.stringify(contractInstance)))
+		
+		      return {successful: true, contractId: contractInstance.id}
+		    } else {
+		      return {successful: false}
+		    }
+		  }
+		'''
+		return code
+	}
+	
+	def void compileContract(IFileSystemAccess2 fsa, Model model) {		
+		val code = '''
+		«FOR asset : assets»
+		import { «asset.name» } from "../assets/«asset.name»"
+		«ENDFOR»
+		«FOR event : events»
+		import { «event.name» } from "../events/«event.name»"
+		«ENDFOR»
+		«FOR role : roles»
+		import { «role.name» } from "../roles/«role.name»"
+		«ENDFOR»
+		«FOR enumeration : enumerations»
+		import { «enumeration.name» } from "../types/«enumeration.name»"
+		«ENDFOR»
+		import { SymboleoContract } from «CONTRACT_CLASS_IMPORT_PATH»
+		import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
+		import { Power } from «POWER_CLASS_IMPORT_PATH»
+		
+		export class «model.contractName» extends SymboleoContract {
+			constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
+				super()
+				«FOR obligation: obligations»
+				this.obligations.«obligation.name» = new Obligation('«obligation.name»', «obligation.creditor», «obligation.debtor», this)
+				«ENDFOR»
+				
+				«FOR power: powers»
+				this.powers.«power.name» = new Power('«power.name»', «power.creditor», «power.debtor», this)
+				«ENDFOR»
+
+				«FOR parameter: model.parameters»
+					this.«parameter.name» = «parameter.name»
+				«ENDFOR»
+				
+				«FOR variable: model.variables»
+					«IF variable.type instanceof RegularType»
+						this.«variable.name» = new «variable.type.name»()
+						«FOR assignment: variable.attributes»
+							«IF assignment instanceof AssignVariable»
+								this.«variable.name».«assignment.name» = «generateDotExpressionString(assignment.value, 'this')»
+							«ELSEIF assignment instanceof AssignExpression»
+								this.«variable.name».«assignment.name» = «generateExpressionString(assignment.value, 'this')»
+							«ENDIF»	
+						«ENDFOR»
+					«ENDIF»
+				«ENDFOR»
+			}
+		}
+		
+		'''
+		fsa.generateFile("./domain/contracts/" + model.contractName + ".js", code)
+	}
+	
+	def String generateExpressionString (Expression argExpression, String thisString) {
+		switch (argExpression){
+			Or: return generateExpressionString(argExpression.left, thisString) + " || " + generateExpressionString(argExpression.right, thisString)
+			And: return generateExpressionString(argExpression.left, thisString) + " && " + generateExpressionString(argExpression.right, thisString)
+			Equality: return  generateExpressionString(argExpression.left, thisString) + getEqualityOperator(argExpression.op) + generateExpressionString(argExpression.right, thisString)
+			Comparison: return generateExpressionString(argExpression.left, thisString) + argExpression.op + generateExpressionString(argExpression.right, thisString)
+			Plus: return generateExpressionString(argExpression.left, thisString) + " + " + generateExpressionString(argExpression.right, thisString)
+			Minus: return generateExpressionString(argExpression.left, thisString) + " - " + generateExpressionString(argExpression.right, thisString)
+			Multi: return generateExpressionString(argExpression.left, thisString) + " * " + generateExpressionString(argExpression.right, thisString)
+			Div: return generateExpressionString(argExpression.left, thisString) + " / " + generateExpressionString(argExpression.right, thisString)
+			PrimaryExpressionRecursive: return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
+			PrimaryExpressionFunctionCall: return generateFunctionCall(argExpression, thisString)
+			NegatedPrimaryExpression: return "!(" + generateExpressionString(argExpression.expression, thisString) + ")"
+			AtomicExpressionTrue: return "true"
+			AtomicExpressionFalse: return "false"
+			AtomicExpressionDouble: return argExpression.value.toString()
+			AtomicExpressionInt: return argExpression.value.toString()
+			AtomicExpressionEnum: return argExpression.enumeration + "." + argExpression.enumItem
+			AtomicExpressionString: return argExpression.value
+			AtomicExpressionParameter: return generateDotExpressionString(argExpression.value, thisString)
+		}
+	}
+
+	def String generateDotExpressionString (Ref argRef, String thisString) {
+		val ids = new ArrayList<String>()
+		var ref = argRef
+		while (ref instanceof VariableDotExpression){
+			ids.add(ref.tail.name)
+			ref = ref.ref	
+		}
+		if (ref instanceof VariableRef) {
+			ids.add((ref as VariableRef).variable)	
+		}
+		ids.add(thisString)
+		return ids.reverse().join(".")
+	}
+	
+	def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
+		val functionCall = argFunctionCallExp.function
+		switch (functionCall) {
+			TwoArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
+			OneArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+			TwoArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
+			OneArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+		}
+	}
+	
+	def String getEqualityOperator(String op) { 
+		switch (op) {
+			case '!=': return '!=='
+			case '==': return '==='
+		}
+	}
+
+	def void compileDomainTypes(IFileSystemAccess2 fsa, List<DomainType> domainTypes) {
+		for (asset : assets) {
+			generateAsset(fsa, asset)
+		}
+		for (event : events) {
+			generateEvent(fsa, event)
+		}
+		for (role : roles) {
+			generateRole(fsa, role)
+		}
+
+		for (enumeration : enumerations) {
+			generateEnumeration(fsa, enumeration)
+		}
+	}
+
+	def void generateEnumeration(IFileSystemAccess2 fsa, Enumeration enumeration) {
+		val code = '''			
+			export const «enumeration.name» = {
+			  	«FOR item : enumeration.enumerationItems»
+			  		«item.name» = «enumeration.enumerationItems.indexOf(item)»,
+			  	«ENDFOR»
+			}
+		'''
+		fsa.generateFile("./domain/types/" + enumeration.name + ".js", code)
+	}
+
+	def RegularType getBaseType(DomainType domainType) {
+		switch (domainType) {
+			RegularType:
+				if (domainType.ontologyType !== null) {
+					return domainType
+				} else {
+					return getBaseType(domainType.regularType)
+				}
+			default:
+				null
+		}
+	}
+
+	def void generateAsset(IFileSystemAccess2 fsa, RegularType asset) {
+		val isBase = asset.ontologyType !== null
+
+		if (isBase === true) {
+			val code = '''
+				import { Asset } from «ASSET_CLASS_IMPORT_PATH»;
+				
+				export class «asset.name» extends Asset {
+				  constructor(«asset.attributes.map[Attribute a | a.name].join(',')») {
+				  	«FOR attribute : asset.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/assets/" + asset.name + ".js", code)
+		} else if (asset.regularType !== null) {
+			val parentType = asset.regularType
+			val allAttributes = Helpers.getAttributesOfRegularType(asset)
+			val parentAttributes = new ArrayList<Attribute>(allAttributes)
+			parentAttributes.removeAll(asset.attributes)
+			val code = '''
+				import { «parentType.name» } from "./«parentType.name»";
+				
+				export class «asset.name» extends «parentType.name» {
+				  constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+				  	super(«parentAttributes.map[Attribute a | a.name].join(',')»)
+				  	«FOR attribute : asset.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/assets/" + asset.name + ".js", code)
+		}
+	}
+
+	def void generateEvent(IFileSystemAccess2 fsa, RegularType event) {
+		val isBase = event.ontologyType !== null
+
+		if (isBase === true) {
+			val code = '''
+				import { Event } from «EVENT_CLASS_IMPORT_PATH»;
+				
+				export class «event.name» extends Event {
+				  constructor(«event.attributes.map[Attribute a | a.name].join(',')») {
+				  	«FOR attribute : event.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/events/" + event.name + ".js", code)
+		} else if (event.regularType !== null) {
+			val parentType = event.regularType
+			val allAttributes = Helpers.getAttributesOfRegularType(event)
+			val parentAttributes = new ArrayList<Attribute>(allAttributes)
+			parentAttributes.removeAll(event.attributes)
+			val code = '''
+				import { «parentType.name» } from "./«parentType.name»";
+				
+				export class «event.name» extends «parentType.name» {
+				  constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+				  	super(«parentAttributes.map[Attribute a | a.name].join(',')»)
+				  	«FOR attribute : event.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/events/" + event.name + ".js", code)
+		}
+	}
+
+	def void generateRole(IFileSystemAccess2 fsa, RegularType role) {
+		val isBase = role.ontologyType !== null
+
+		if (isBase === true) {
+			val code = '''
+				import { Role } from «ROLE_CLASS_IMPORT_PATH»;
+				
+				export class «role.name» extends Role {
+				  constructor(«role.attributes.map[Attribute a | a.name].join(',')») {
+				  	«FOR attribute : role.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/roles/" + role.name + ".js", code)
+		} else if (role.regularType !== null) {
+			val parentType = role.regularType
+			val allAttributes = Helpers.getAttributesOfRegularType(role)
+			val parentAttributes = new ArrayList<Attribute>(allAttributes)
+			parentAttributes.removeAll(role.attributes)
+			val code = '''
+				import { «parentType.name» } from "./«parentType.name»";
+				
+				export class «role.name» extends «parentType.name» {
+				  constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+				  	super(«parentAttributes.map[Attribute a | a.name].join(',')»)
+				  	«FOR attribute : role.attributes»
+				  		this.«attribute.name» = «attribute.name»
+				  	«ENDFOR»
+				  }
+				}
+			'''
+			fsa.generateFile("./domain/roles/" + role.name + ".js", code)
+		}
+	}
+
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		fsa.generateFile('test.pl', resource.allContents.filter(Model).head.compile)
-//		doGenerateJS(resource, fsa, context)
+		for (e : resource.allContents.toIterable.filter(Model)) {
+			generateHFSource(fsa, e)
+		}
 	}
 }

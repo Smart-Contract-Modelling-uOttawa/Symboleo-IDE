@@ -31,6 +31,7 @@ EnumItem:
 
 // TODO not extend itself, prevent cycles
 // TODO check attribute names to be unique, (parent classes)
+// TODO can only extend regular types
 RegularType:
 	name=ID ('isA' | 'isAn') ontologyType=OntologyType ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
 	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?;
@@ -56,18 +57,21 @@ ParameterType:
 	baseType=BaseType |
 	domainType=[DomainType];
 
+// TODO traverse in correct order
 Variable:
 	name=ID ':' type=[RegularType] ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
 
 // TODO name should be from the attributes of the used type
 // TODO assign from parameters and variables
 // TODO check assigned type is correct
-Assignment returns AssignVariable:
+// TODO should be declared before use
+Assignment:
 	{AssignVariable} name=ID ':=' value=VariableDotExpression |
 	AssignmentB;
 
 VariableDotExpression returns Ref:
-	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
+	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*
+	;
 
 VariableRef returns Ref:
 	{VariableRef} variable=ID;
@@ -93,8 +97,7 @@ And returns Expression:
 	Equality ({And.left=current} "and" right=Equality)*;
 
 Equality returns Expression:
-	Comparison ({Equality.left=current} op=("==" | "!=")
-	right=Comparison)*;
+	Comparison ({Equality.left=current} op=("==" | "!=") right=Comparison)*;
 
 Comparison returns Expression:
 	Addition ({Comparison.left=current} op=(">=" | "<=" | ">" | "<") right=Addition)*;
@@ -106,105 +109,109 @@ Multiplication returns Expression:
 	PrimaryExpression (({Multi.left=current} '*' | {Div.left=current} '/') right=PrimaryExpression)*;
 
 PrimaryExpression returns Expression:
-	'(' Expression ')' |
+	{PrimaryExpressionRecursive} '(' inner=Expression ')' |
 	{PrimaryExpressionFunctionCall} function=FunctionCall |
 	{NegatedPrimaryExpression} "not" expression=PrimaryExpression |
 	AtomicExpression
 ;
 
 AtomicExpression returns Expression:
+	{AtomicExpressionTrue} value="true" |
+	{AtomicExpressionFalse} value="false" |
 	{AtomicExpressionDouble} value=Double |
 	{AtomicExpressionInt} value=INT |
+	{AtomicExpressionEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{AtomicExpressionString} value=STRING |
-	{AtomicExpressionTrue} value="false" |
-	{AtomicExpressionFalse} value="true" |
 	{AtomicExpressionParameter} value=VariableDotExpression
 ;
 
 FunctionCall:
-	MathFunction | StringFunction | TimeFunction
+	MathFunction | StringFunction | DateFunction
 ;
 
-MathFunction:
-	name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
-	name=('Math.abs') '(' arg1=Expression ')' |
-	name=('Math.floor') '(' arg1=Expression ')';
+MathFunction returns FunctionCall:
+	{TwoArgMathFunction} name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
+	{OneArgMathFunction} name=('Math.abs'|'Math.floor') '(' arg1=Expression ')';
 
-StringFunction:
-	name=('String.concatenate') '(' arg1=Expression ',' arg2=Expression ')' |
-	name=('String.lowerCase') '(' arg1=Expression ')';
+StringFunction returns FunctionCall:
+	{TwoArgStringFunction} name=('String.concatenate') '(' arg1=Expression ',' arg2=Expression ')' |
+	{OneArgStringFunction} name=('String.lowerCase') '(' arg1=Expression ')';
 	
-TimeFunction:
-	'Time.function()'		
+DateFunction returns FunctionCall:
+	{OneArgDateFunction} name='Date.function()'		
 ;
 
 // TODO check that creditor and debtor are valid references
 Obligation:
-	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=ID ',' creditor=ID ','
-	antecedent=Proposition ',' consequent=Proposition ')';
+	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=ID ',' creditor=ID ',' antecedent=Proposition ',' consequent=Proposition ')';
 
 Power:
-	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=ID ',' debtor=ID ',' antecedent=Proposition ','
-	consequent=Proposition ')';
+	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=ID ',' debtor=ID ',' antecedent=Proposition ',' consequent=Proposition ')';
 
-Proposition:
-	junctions+=PJunction ('or' junctions+=PJunction)*;
+Proposition: POr;
 
-PJunction:
-	equalityExps+=PEquality ('and' equalityExps+=PEquality)*;
-	
-PEquality:
+POr returns Proposition:
+	PAnd ({POr.left=current} "or" right=PAnd)*;
+
+PAnd returns Proposition:
+	PEquality ({PAnd.left=current} "and" right=PEquality)*;
+
+PEquality returns Proposition:
 	PComparison ({PEquality.left=current} op=("==" | "!=") right=PComparison)*;
 
-PComparison:
-	PNegation ({PComparison.left=current} op=(">=" | "<=" | ">" | "<") right=PNegation)*;
+PComparison returns Proposition:
+	PAtomicExpression ({PComparison.left=current} op=(">=" | "<=" | ">" | "<") right=PAtomicExpression)*;
 
-PNegation:
-	negated?=('not')? atomicExpression=PAtom;
-
-PAtom:
-	'(' inner=Proposition ')' |
+PAtomicExpression returns Proposition:
+	{PAtomRecursive} '(' inner=Proposition ')' |
+	{NegatedPAtom} 'not' negated=PAtomicExpression |
 	{PAtomPredicate} predicateFunction=PredicateFunction |
+    {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{PAtomVariable} variable=VariableDotExpression |
 	{PAtomPredicateTrueLiteral} value='true' |
 	{PAtomPredicateFalseLiteral} value='false' |
+	{PAtomDoubleLiteral} value=Double |
 	{PAtomIntLiteral} value=INT |
 	{PAtomStringLiteral} value=STRING
 	;
 
 // TODO check cannotBeAssigned arg type
 PredicateFunction:
-	name='Happens' '(' event=Event ')' |
-	name='HappensBefore' '(' event=Event ',' point=Point ')' |
-	name='HappensAfter' '(' event=Event ',' point=Point ')' |
-	name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
-	name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
-	name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
-	name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
-	name='CannotBeAssigned' '(' arg1=ID ')'
+	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
+	{PredicateFunctionHappensBefore} name='HappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
+	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
+	{PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
+	{PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
+	{PredicateFunctionCannotBeAssigned} name='CannotBeAssigned' '(' arg1=ID ')'
 	;
 
 Event:
+	VariableEvent |
+	ObligationEvent |
+	ContractEvent |
+	PowerEvent;
+	
+VariableEvent returns Event:
 	{VariableEvent} variable=VariableDotExpression
-	| obligationEvent=ObligationEvent
-	| contractEvent=ContractEvent
-	| powerEvent=PowerEvent;
+;
 
-PowerEvent:
-	eventName=PowerEventName '(' powerVariable=[Power] ')';
+PowerEvent returns Event:
+	{PowerEvent} eventName=PowerEventName '(' powerVariable=[Power] ')';
 
 PowerEventName:
 	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Exerted' | 'Expired' | 'Terminated';
 
-ObligationEvent:
-	eventName=ObligationEventName '(' obligationVariable=[Obligation] ')';
+ObligationEvent returns Event:
+	{ObligationEvent} eventName=ObligationEventName '(' obligationVariable=[Obligation] ')';
 
 ObligationEventName:
 	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' |
 	'Terminated';
 
-ContractEvent:
-	eventName=ContractEventName '(' 'self' ')';
+ContractEvent returns Event:
+	{ContractEvent} eventName=ContractEventName '(' 'self' ')';
 
 ContractEventName:
 	'Activated' | 'Suspended' | 'Resumed' | 'FuflfilledObligations' | 'RevokedParty' | 'AssignedParty' | 'Terminated' |

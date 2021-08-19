@@ -15,10 +15,13 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
 
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionEnum;
 import ca.uottawa.csmlab.symboleo.symboleo.Attribute;
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
+import ca.uottawa.csmlab.symboleo.symboleo.Enumeration;
 import ca.uottawa.csmlab.symboleo.symboleo.Model;
 import ca.uottawa.csmlab.symboleo.symboleo.OntologyType;
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum;
 import ca.uottawa.csmlab.symboleo.symboleo.Parameter;
 import ca.uottawa.csmlab.symboleo.symboleo.Ref;
 import ca.uottawa.csmlab.symboleo.symboleo.RegularType;
@@ -90,6 +93,12 @@ public class SymboleoScopeProvider extends AbstractSymboleoScopeProvider {
           }
         }
       }
+    } else if (context instanceof PAtomEnum && reference == SymboleoPackage.Literals.PATOM_ENUM__ENUM_ITEM) {
+      PAtomEnum enumeration = (PAtomEnum) context;
+      return Scopes.scopeFor(enumeration.getEnumeration().getEnumerationItems());
+    } else if (context instanceof AtomicExpressionEnum && reference == SymboleoPackage.Literals.ATOMIC_EXPRESSION_ENUM__ENUM_ITEM) {
+      AtomicExpressionEnum enumeration = (AtomicExpressionEnum) context;
+      return Scopes.scopeFor(enumeration.getEnumeration().getEnumerationItems());
     }
 
     return super.getScope(context, reference);
