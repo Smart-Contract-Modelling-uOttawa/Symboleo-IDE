@@ -138,7 +138,7 @@ StringFunction returns FunctionCall:
 	{OneArgStringFunction} name=('String.lowerCase') '(' arg1=Expression ')';
 	
 DateFunction returns FunctionCall:
-	{OneArgDateFunction} name='Date.function()'		
+	{OneArgDateFunction} name='Date.function()'		// TODO
 ;
 
 // TODO check that creditor and debtor are valid references
@@ -146,7 +146,16 @@ Obligation:
 	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=ID ',' creditor=ID ',' antecedent=Proposition ',' consequent=Proposition ')';
 
 Power:
-	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=ID ',' debtor=ID ',' antecedent=Proposition ',' consequent=Proposition ')';
+	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=ID ',' debtor=ID ',' antecedent=Proposition ',' consequent=PowerFunction ')';
+	
+PowerFunction returns PowerFunction:
+	{PFObligationSuspended} 'Suspended' '(' obligationVariable=[Obligation] ')' | 
+	{PFObligationResumed} 'Resumed' '(' obligationVariable=[Obligation] ')' | 
+	{PFObligationDischarged} 'Discharged' '(' obligationVariable=[Obligation] ')' |
+	{PFObligationTerminated} 'Terminated' '(' obligationVariable=[Obligation] ')' |
+	{PFContractSuspended} 'Suspended' '(' 'self' ')' | 
+	{PFContractResumed} 'Resumed' '(' 'self' ')' |
+	{PFContractTerminated} 'Terminated' '(' 'self' ')';
 
 Proposition: POr;
 
@@ -164,7 +173,7 @@ PComparison returns Proposition:
 
 PAtomicExpression returns Proposition:
 	{PAtomRecursive} '(' inner=Proposition ')' |
-	{NegatedPAtom} 'not' negated=PAtomicExpression |
+	{NegatedPAtom} 'not' negated=PAtomicExpression | // TODO does not work with happens* functions
 	{PAtomPredicate} predicateFunction=PredicateFunction |
     {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{PAtomVariable} variable=VariableDotExpression |
@@ -207,15 +216,13 @@ ObligationEvent returns Event:
 	{ObligationEvent} eventName=ObligationEventName '(' obligationVariable=[Obligation] ')';
 
 ObligationEventName:
-	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' |
-	'Terminated';
+	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' | 'Terminated';
 
 ContractEvent returns Event:
 	{ContractEvent} eventName=ContractEventName '(' 'self' ')';
 
 ContractEventName:
-	'Activated' | 'Suspended' | 'Resumed' | 'FuflfilledObligations' | 'RevokedParty' | 'AssignedParty' | 'Terminated' |
-	'Rescinded';
+	'Activated' | 'Suspended' | 'Resumed' | 'FulfilledObligations' | 'RevokedParty' | 'AssignedParty' | 'Terminated' | 'Rescinded';
 
 Point:
 	pointExpression=PointExpression;
@@ -273,15 +280,13 @@ ObligationState:
 	eventName=ObligationStateName '(' obligationVariable=[Obligation] ')';
 
 ObligationStateName:
-	'Create' | 'Discharge' | 'Active' | 'InEffect' | 'Suspension' | 'Violation' | 'Fulfillment' |
-	'UnsuccessfulTermination';
+	'Create' | 'Discharge' | 'Active' | 'InEffect' | 'Suspension' | 'Violation' | 'Fulfillment' | 'UnsuccessfulTermination';
 
 ContractState:
 	eventName=ContractStateName '(' 'self' ')';
 
 ContractStateName:
-	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination'
-	| 'Active';
+	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
 	
 
 // TODO dot navigation for ontology models

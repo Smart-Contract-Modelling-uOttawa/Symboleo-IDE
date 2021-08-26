@@ -73,6 +73,15 @@ import ca.uottawa.csmlab.symboleo.symboleo.VariableEvent
 import ca.uottawa.csmlab.symboleo.symboleo.PowerEvent
 import ca.uottawa.csmlab.symboleo.symboleo.ObligationEvent
 import ca.uottawa.csmlab.symboleo.symboleo.ContractEvent
+import ca.uottawa.csmlab.symboleo.symboleo.PFObligationSuspended
+import ca.uottawa.csmlab.symboleo.symboleo.PFObligationResumed
+import ca.uottawa.csmlab.symboleo.symboleo.PFObligationDischarged
+import ca.uottawa.csmlab.symboleo.symboleo.PFObligationTerminated
+import ca.uottawa.csmlab.symboleo.symboleo.PFContractSuspended
+import ca.uottawa.csmlab.symboleo.symboleo.PFContractResumed
+import ca.uottawa.csmlab.symboleo.symboleo.PFContractTerminated
+import ca.uottawa.csmlab.symboleo.symboleo.Interval
+import ca.uottawa.csmlab.symboleo.symboleo.Point
 
 //
 /**
@@ -88,40 +97,47 @@ class SymboleoGenerator extends AbstractGenerator {
 	val POWER_CLASS_IMPORT_PATH = "\"../../core/Power\""
 	val OBLIGATION_CLASS_IMPORT_PATH = "\"../../core/Obligation\""
 	val CONTRACT_CLASS_IMPORT_PATH = "\"../../core/SymboleoContract\""
+	val EVENTS_CLASS_IMPORT_PATH = "\"../../core/InternalEvents\""
+	val PREDICATES_CLASS_IMPORT_PATH = "\"../../core/Predicates\""
 
 	val assets = new ArrayList<RegularType>
 	val events = new ArrayList<RegularType>
 	val roles = new ArrayList<RegularType>
 	val enumerations = new ArrayList<Enumeration>
 	val parameters = new ArrayList<Parameter>
-	
+
 	val obligations = new ArrayList<Obligation>
 	val survivingObligations = new ArrayList<Obligation>
 	val powers = new ArrayList<Power>
 	val conditionalObligations = new ArrayList<Obligation>
 	val conditionalSurvivingObligations = new ArrayList<Obligation>
-	val conditionalPowers= new ArrayList<Power>
+	val conditionalPowers = new ArrayList<Power>
+	val allObligations = new ArrayList<Obligation>
+	val allSurvivingObligations = new ArrayList<Obligation>
 	
 	val eventVariables = new ArrayList<Variable>
-		
+
 	val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
 	val survivingObligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
 	val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
-	
+
+	val obligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val survivingObligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val powerAntecedentEvents = new HashMap<Power, List<PAtomPredicate>>
+
 	val obligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
 	val survivingObligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	
 
-	def void generateHFSource(IFileSystemAccess2 fsa, Model model) {
+	def void generateHFSource(IFileSystemAccess2 fsa, Model model) {		
 		parse(model)
 		compileDomainTypes(fsa, model.domainTypes)
 		compileContract(fsa, model)
-		compileInitMethod(model)
 		compileTransactionFile(fsa, model)
-		
+		compileEventsFile(fsa, model)
+
 	}
-	
-	def void parse (Model model) {
+
+	def void parse(Model model) {
 		parameters.addAll(model.parameters)
 		
 		for (domainType : model.domainTypes) {
@@ -140,249 +156,580 @@ class SymboleoGenerator extends AbstractGenerator {
 		}
 
 		// event variables
-		for(variable: model.variables){
-			if (events.indexOf(variable.type) != -1){
+		for (variable : model.variables) {
+			if (events.indexOf(variable.type) != -1) {
 				eventVariables.add(variable)
-			}	
+			}
 		}
-		
+
 		// filtering conditional obligations and powers
-		for (obligation: model.obligations){
-			if (obligation.trigger === null){
+		for (obligation : model.obligations) {
+			if (obligation.trigger === null) {
 				obligations.add(obligation)
 			} else {
 				conditionalObligations.add(obligation)
 			}
 		}
-		for (obligation: model.survivingObligations){
-			if (obligation.trigger === null){
+		for (obligation : model.survivingObligations) {
+			if (obligation.trigger === null) {
 				survivingObligations.add(obligation)
 			} else {
 				conditionalSurvivingObligations.add(obligation)
 			}
 		}
-		for (power: model.powers){
-			if (power.trigger === null){
+		for (power : model.powers) {
+			if (power.trigger === null) {
 				powers.add(power)
 			} else {
 				conditionalPowers.add(power)
 			}
 		}
-		
+
 		// triggers
-		for (obligation: conditionalObligations){
+		for (obligation : conditionalObligations) {
 			val proposition = obligation.trigger
-			obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition))
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				obligationTriggerEvents.put(obligation, list)
+			}
 		}
-		for (obligation: conditionalSurvivingObligations){
+		for (obligation : conditionalSurvivingObligations) {
 			val proposition = obligation.trigger
-			survivingObligationTriggerEvents.put(obligation, collectPropositionEvents(proposition))
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				survivingObligationTriggerEvents.put(obligation, list)
+			}
 		}
-		for (power: conditionalPowers){
+		for (power : conditionalPowers) {
 			val proposition = power.trigger
-			powerTriggerEvents.put(power, collectPropositionEvents(proposition))
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				powerTriggerEvents.put(power, list)
+			}
+		}
+		// obligation fullfilment events
+		for (obligation : model.obligations) {
+			val proposition = obligation.consequent
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				obligationFullfilmentEvents.put(obligation, list)
+			}
+		}
+		for (obligation : model.survivingObligations) {
+			val proposition = obligation.consequent
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				survivingObligationFullfilmentEvents.put(obligation, list)
+			}
+		}
+		// antecedent activate event 
+		for (obligation : conditionalObligations) {
+			val proposition = obligation.antecedent
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				obligationAntecedentEvents.put(obligation, list)
+			}
+		}
+		for (obligation : conditionalSurvivingObligations) {
+			val proposition = obligation.antecedent
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				survivingObligationAntecedentEvents.put(obligation, list)
+			}
+		}
+		for (power : conditionalPowers) {
+			val proposition = power.antecedent
+			val list = collectPropositionEvents(proposition)
+			if(list.size > 0) {
+				powerAntecedentEvents.put(power, list)
+			}
 		}
 		
-		for (obligation: model.obligations){
-			val proposition = obligation.trigger
-			obligationFullfilmentEvents.put(obligation, collectPropositionEvents(proposition))
+		allObligations.addAll(obligations)
+		allObligations.addAll(conditionalObligations)
+		allSurvivingObligations.addAll(survivingObligations)
+		allSurvivingObligations.addAll(conditionalSurvivingObligations)
+
+	}
+
+	def String compileEventsMap() {
+		val arrays = new ArrayList<String>
+		for (obligation: obligationTriggerEvents.keySet) {
+			arrays.add(generateEventMapLineString(obligationTriggerEvents.get(obligation), '''EventListeners.createObligation_«obligation.name»'''))
 		}
-		for (obligation: model.survivingObligations){
-			val proposition = obligation.trigger
-			survivingObligationFullfilmentEvents.put(obligation, collectPropositionEvents(proposition))
+		for (obligation: survivingObligationTriggerEvents.keySet) {
+			arrays.add(generateEventMapLineString(survivingObligationTriggerEvents.get(obligation), '''EventListeners.createSurvivingObligation_«obligation.name»'''))
+		}
+		for (power: powerTriggerEvents.keySet) {
+			arrays.add(generateEventMapLineString(powerTriggerEvents.get(power), '''EventListeners.createPower_«power.name»'''))
 		}
 		
+		// antecedent events
+		for (obligation: obligationAntecedentEvents.keySet) {
+			arrays.add(generateEventMapLineString(obligationAntecedentEvents.get(obligation), '''EventListeners.activateObligation_«obligation.name»'''))
+		}
+		for (obligation: survivingObligationAntecedentEvents.keySet) {
+			arrays.add(generateEventMapLineString(survivingObligationAntecedentEvents.get(obligation), '''EventListeners.activateSurvivingObligation_«obligation.name»'''))
+		}
+		for (power: powerAntecedentEvents.keySet) {
+			arrays.add(generateEventMapLineString(powerAntecedentEvents.get(power), '''EventListeners.activatePower_«power.name»'''))
+		}
+		
+		// fulfill obigation events
+		for (obligation: obligationFullfilmentEvents.keySet) {
+			arrays.add(generateEventMapLineString(obligationFullfilmentEvents.get(obligation), '''EventListeners.fulfillObligation_«obligation.name»'''))
+		}
+		for (obligation: survivingObligationFullfilmentEvents.keySet) {
+			arrays.add(generateEventMapLineString(survivingObligationFullfilmentEvents.get(obligation), '''EventListeners.fulfillSurvivingObligation_«obligation.name»'''))
+		}
+		
+		return '''
+		const eventMap = [
+			«FOR line: arrays»
+			«line»
+			«ENDFOR»
+		]
+		'''
 	}
 	
+	def void compileEventsFile(IFileSystemAccess2 fsa, Model model) {
 	
-	def void compileTriggers(Model model){
+		val code = '''
+		import { InternalEventSource, InternalEvent, InternalEventType } from «EVENTS_CLASS_IMPORT_PATH»
+		import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
+		import { Power } from «POWER_CLASS_IMPORT_PATH»
+		import { Predicates } from «PREDICATES_CLASS_IMPORT_PATH»
+		«FOR enumeration : enumerations»
+		import { «enumeration.name» } from "../domain/types/«enumeration.name»"
+		«ENDFOR»
 		
+		export const eventListeners = {
+			«FOR obligation: obligationTriggerEvents.keySet»
+				createObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.trigger)») {
+					contract.obligations.«obligation.name» = new Obligation('«obligation.name»', contract.«obligation.creditor», contract.«obligation.debtor», contract)
+					}
+				},
+			«ENDFOR»
+			«FOR obligation: survivingObligationTriggerEvents.keySet»
+				createSurvivingObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.trigger)») {
+						contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', contract.«obligation.creditor», contract.«obligation.debtor», contract)
+					}
+				},
+			«ENDFOR»
+			«FOR power: powerTriggerEvents.keySet»
+				createPower_«power.name»(contract) { 
+					if («generatePropositionString(power.trigger)») {
+						contract.powers.«power.name» = new Power('«power.name»', contract.«power.creditor», contract.«power.debtor», contract)
+					}
+				},
+			«ENDFOR»
+			«FOR obligation: obligationAntecedentEvents.keySet»
+				activateObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.antecedent)») {
+						contract.obligations.«obligation.name».activated()
+					}
+				},
+			«ENDFOR»
+			«FOR obligation: survivingObligationAntecedentEvents.keySet»
+				activateSurvivingObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.antecedent)») {
+						contract.survivingObligations.«obligation.name».activated()
+					}
+				},
+			«ENDFOR»
+			«FOR power: powerAntecedentEvents.keySet»
+				activatePower_«power.name»(contract) { 
+					if («generatePropositionString(power.antecedent)») {
+						contract.powers.«power.name».activated()
+					}
+				},
+			«ENDFOR»
+			// fulfill obigation events
+			«FOR obligation: obligationFullfilmentEvents.keySet»
+				fulfillObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.consequent)») {
+						contract.obligations.«obligation.name».fulfilled()
+					}
+				},
+			«ENDFOR»
+			«FOR obligation: survivingObligationFullfilmentEvents.keySet»
+				fulfillSurvivingObligation_«obligation.name»(contract) { 
+					if («generatePropositionString(obligation.consequent)») {
+						contract.survivingObligations.«obligation.name».fulfilled()
+					}
+				},
+			«ENDFOR»
+		}
+		
+		«compileEventsMap()»
+		'''
+		
+		fsa.generateFile("./events/" + model.contractName + "_events.js", code)
 	}
 	
-	def List<PAtomPredicate> collectPropositionEvents(Proposition proposition){
+	def String generateEventMapLineString(List<PAtomPredicate> predicates, String listenerName){
+		val line = new StringBuilder()
+		line.append('[[')
+			for( predicate: predicates) {
+				val pf = predicate.predicateFunction
+				switch(pf) {
+				 	PredicateFunctionHappens: line.append(generateEventObjectString(pf.event) + ', ')
+				 	PredicateFunctionHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
+				 	PredicateFunctionHappensAfter: line.append(generateEventObjectString(pf.event) + ', ')
+				 	PredicateFunctionHappensWithin: line.append(generateEventObjectString(pf.event) + ', ')
+				}
+			}
+		line.append('''], «listenerName»],''')
+		return line.toString
+	}
+	
+	def String generateEventObjectString(Event event){
+		switch(event) {
+			VariableEvent: return '''new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, «generateDotExpressionString(event.variable, 'contract')»)'''
+			ObligationEvent: return '''new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.«event.eventName», contract.«event.obligationVariable.name»)'''
+			ContractEvent: return '''new InternalEvent(InternalEventSource.contract, InternalEventType.contract.«event.eventName», contract'''
+			PowerEvent: return '''new InternalEvent(InternalEventSource.power, InternalEventType.power.«event.eventName», contract.«event.powerVariable.name»)'''
+		}
+	}
+
+	def List<PAtomPredicate> collectPropositionEvents(Proposition proposition) {
 		val list = new ArrayList<PAtomPredicate>
-		switch (proposition){
+		switch (proposition) {
 			POr: {
 				list.addAll(collectPropositionEvents(proposition.left))
 				list.addAll(collectPropositionEvents(proposition.right))
-			} 
+			}
 			PAnd: {
 				list.addAll(collectPropositionEvents(proposition.left))
 				list.addAll(collectPropositionEvents(proposition.right))
-			} 
+			}
 			PEquality: {
 				list.addAll(collectPropositionEvents(proposition.left))
 				list.addAll(collectPropositionEvents(proposition.right))
-			} 
+			}
 			PComparison: {
 				list.addAll(collectPropositionEvents(proposition.left))
 				list.addAll(collectPropositionEvents(proposition.right))
-			} 
-			PAtomRecursive: list.addAll(collectPropositionEvents(proposition.inner))
-			NegatedPAtom: list.addAll(collectPropositionEvents(proposition.negated))
-			PAtomPredicate: list.add(proposition)
-//			PAtomEnum:
-//			PAtomVariable: 
-//			PAtomPredicateTrueLiteral: 
-//			PAtomPredicateFalseLiteral: 
-//			PAtomIntLiteral: 
-//			PAtomStringLiteral: 
+			}
+			PAtomRecursive:
+				list.addAll(collectPropositionEvents(proposition.inner))
+			NegatedPAtom:
+				list.addAll(collectPropositionEvents(proposition.negated))
+			PAtomPredicate:
+				list.add(proposition)
 		}
 		return list
 	}
-	
-	def String generatePropositionString(Proposition proposition){
-		switch (proposition){
-			POr: return generatePropositionString(proposition.left) + "||" + generatePropositionString(proposition.right) 
-			PAnd: return generatePropositionString(proposition.left) + "&&" + generatePropositionString(proposition.right) 
-			PEquality: return generatePropositionString(proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(proposition.right) 
-			PComparison: return generatePropositionString(proposition.left) + proposition.op + generatePropositionString(proposition.right)
-			PAtomRecursive: return "(" + generatePropositionString(proposition.inner) + ")"
-			NegatedPAtom: return "!(" + generatePropositionString(proposition.negated) + ")"
-			PAtomPredicate: return generatePredicateFunctionString(proposition.predicateFunction)
-			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
-			PAtomVariable: return generateDotExpressionString(proposition.variable, 'this')
-			PAtomPredicateTrueLiteral: return "true"
-			PAtomPredicateFalseLiteral: return "false" 
-			PAtomDoubleLiteral: return proposition.value.toString
-			PAtomIntLiteral: return proposition.value.toString
-			PAtomStringLiteral: return proposition.value 
+
+	def String generatePropositionString(Proposition proposition) {
+		switch (proposition) {
+			POr:
+				return generatePropositionString(proposition.left) + "||" + generatePropositionString(proposition.right)
+			PAnd:
+				return generatePropositionString(proposition.left) + "&&" + generatePropositionString(proposition.right)
+			PEquality:
+				return generatePropositionString(proposition.left) + getEqualityOperator(proposition.op) +
+					generatePropositionString(proposition.right)
+			PComparison:
+				return generatePropositionString(proposition.left) + proposition.op +
+					generatePropositionString(proposition.right)
+			PAtomRecursive:
+				return "(" + generatePropositionString(proposition.inner) + ")"
+			NegatedPAtom:
+				return "!(" + generatePropositionString(proposition.negated) + ")"
+			PAtomPredicate:
+				return generatePredicateFunctionString(proposition.predicateFunction)
+			PAtomEnum:
+				return proposition.enumeration.name + "." + proposition.enumItem.name
+			PAtomVariable:
+				return generateDotExpressionString(proposition.variable, 'this')
+			PAtomPredicateTrueLiteral:
+				return "true"
+			PAtomPredicateFalseLiteral:
+				return "false"
+			PAtomDoubleLiteral:
+				return proposition.value.toString
+			PAtomIntLiteral:
+				return proposition.value.toString
+			PAtomStringLiteral:
+				return proposition.value
 		}
 	}
-	
-	def String generatePredicateFunctionString(PredicateFunction predicate){
-		switch (predicate){
-			PredicateFunctionHappens: return '''Predicate.happens(«generateEventVariableString(predicate.event)», ts)'''
-			PredicateFunctionHappensBefore: return 'Predicate.happensBefore(e, ts)'
-			PredicateFunctionHappensAfter: return 'Predicate.happensAfter(e, ts)' 
-			PredicateFunctionHappensWithin: return 'Predicate.happensWithin(e, ts)'
-		}	
+
+	def String generatePredicateFunctionString(PredicateFunction predicate) {
+		switch (predicate) {
+			PredicateFunctionHappens: return '''Predicates.happens(«generateEventVariableString(predicate.event)»)'''
+			PredicateFunctionHappensBefore: return '''Predicates.happensBefore(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point)»)'''
+			PredicateFunctionHappensAfter: return '''Predicates.happensAfter(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point)»)'''
+			PredicateFunctionHappensWithin: return '''Predicates.happensWithin(«generateEventVariableString(predicate.event)», «generateIntervalExpresionString(predicate.interval)»)'''
+		}
 	}
-	
-	def String generateEventVariableString(Event event){
-		switch (event){
+
+	def String generateEventVariableString(Event event) {
+		switch (event) {
 			VariableEvent: return generateDotExpressionString(event.variable, 'contract')
 			PowerEvent: return '''contract.powers.«event.powerVariable.name»._events.«event.eventName.toLowerCase»'''
 			ObligationEvent: return '''contract.obligations.«event.obligationVariable.name»._events.«event.eventName.toLowerCase»'''
 			ContractEvent: return '''contract._events.«event.eventName.toLowerCase»'''
-		}	
+		}
 	}
 	
+	def String generatePointExpresionString(Point point) {
+		return ''
+	}
+	
+	def String generateIntervalExpresionString(Interval interval) {
+		return ''
+	}
+
 	def void compileTransactionFile(IFileSystemAccess2 fsa, Model model) {
 		val code = '''
-		import { Contract } from 'fabric-contract-api' 
-		import { ContractStates } from «CONTRACT_CLASS_IMPORT_PATH»
-		«FOR asset : assets»
-		import { «asset.name» } from "../../domain/assets/«asset.name»"
-		«ENDFOR»
-		«FOR event : events»
-		import { «event.name» } from "../../domain/events/«event.name»"
-		«ENDFOR»
-		«FOR role : roles»
-		import { «role.name» } from "../../domain/roles/«role.name»"
-		«ENDFOR»
-		«FOR enumeration : enumerations»
-		import { «enumeration.name» } from "../../domain/types/«enumeration.name»"
-		«ENDFOR»
-		
-		class HFContract extends Contract {
-			
-			«compileInitMethod(model)»
-		
-			«FOR method: compileEventTriggerMethods(model)»
-			«method»
-			
+			import { Contract } from 'fabric-contract-api' 
+			import { ContractStates } from «CONTRACT_CLASS_IMPORT_PATH»
+			«FOR asset : assets»
+				import { «asset.name» } from "../../domain/assets/«asset.name»"
 			«ENDFOR»
-		}
+			«FOR event : events»
+				import { «event.name» } from "../../domain/events/«event.name»"
+			«ENDFOR»
+			«FOR role : roles»
+				import { «role.name» } from "../../domain/roles/«role.name»"
+			«ENDFOR»
+			«FOR enumeration : enumerations»
+				import { «enumeration.name» } from "../../domain/types/«enumeration.name»"
+			«ENDFOR»
+			
+			class HFContract extends Contract {
+				
+				«compileInitMethod(model)»
+			
+				«FOR method : compileEventTriggerMethods(model)»
+				«method»
+				
+				«ENDFOR»
+				«FOR method : compilePowerTransactions(model)»
+				«method»
+				
+				«ENDFOR»
+				«FOR method : compileViolationEventsTransactions(model)»
+				«method»
+				
+				«ENDFOR»
+
+			}
 		'''
 		fsa.generateFile("./transactions/" + model.contractName + ".js", code)
 	}
 	
-	def List<String> compileEventTriggerMethods (Model model) {
+	def List<String> compileViolationEventsTransactions(Model model) {
 		val methods = new ArrayList<String>
-		for(variable: eventVariables){
+		
+		for (obligation: allObligations) {
 			methods.add('''
-			async trigger_«variable.name»(ctx, contractId, event) {
-			    const contractState = await ctx.stub.getState(contractId)
-			    if (contractState == null) {
-			      return {successful: false}
-			    }
-			    const contract = demarsheller(contractState)
+			async violateObligationPay_«obligation.name»(ctx, contractId) {
+				const contractState = await ctx.stub.getState(contractId)
+				if (contractState == null) {
+					return {successful: false}
+				}
+				const contract = demarsheller(contractState)
 			
-			    if (contract.isInEffect()) {
+				if (contract.isInEffect()) {
+					if (contract.obligation.«obligation.name».violated()) {
+						sendEvent(new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.violated, '«obligation.name»'))
 			
-			      contract.«variable.name».happen(event)
-			      // sendEvent(new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.happened, '«variable.name»'))
+						await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)))
+						return {successful: true}
+					} else {
+						return {successful: false}
+					}
+				} else {
+					return {successful: false}
+				}
+			}
+			''')
+		}
+		for (obligation: allSurvivingObligations) {
+			methods.add('''
+			async violateSurvivingObligations_«obligation.name»(ctx, contractId) {
+				const contractState = await ctx.stub.getState(contractId)
+				if (contractState == null) {
+					return {successful: false}
+				}
+				const contract = demarsheller(contractState)
 			
-			      await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contractState)))
-			      return {successful: true}
-			    } else {
-			    	return {successful: false}
-			    }
-			  }
-			  ''')
-		  }
-		  return methods
+				if (contract.isInEffect()) {
+					if (contract.survivingObligations.«obligation.name».violated()) {
+						sendEvent(new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.violated, '«obligation.name»'))
+			
+						await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)))
+						return {successful: true}
+					} else {
+						return {successful: false}
+					}
+				} else {
+					return {successful: false}
+				}
+			}
+			''')
+		}
+		return methods
+	}
+
+	def List<String> compilePowerTransactions(Model model) {
+		val methods = new ArrayList<String>
+		for (power : model.powers) {
+			val powerFunction = power.consequent
+			switch (powerFunction) {
+				PFObligationSuspended: methods.add(generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'suspended'))
+				PFObligationResumed: methods.add(generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'resumed'))
+				PFObligationDischarged: methods.add(generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'discharged'))
+				PFObligationTerminated: methods.add(generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'terminated'))
+				PFContractSuspended: methods.add(generatePowerTransactionForContract(power.name, 'suspended'))
+				PFContractResumed: methods.add(generatePowerTransactionForContract(power.name, 'resumed'))
+				PFContractTerminated: methods.add(generatePowerTransactionForContract(power.name, 'terminated'))
+			}
+		}
+		return methods
+	}
+
+	def String generatePowerTransactionForObligation(String powerName, String obligationName, String stateMethod) {
+		return '''
+		async power_«stateMethod»Obligation_«obligationName»(ctx, contractId) {
+			const contractState = await ctx.stub.getState(contractId)
+			if (contractState == null) {
+				return {successful: false}
+			}
+			const contract = demarsheller(contractState)
+		
+			if (contract.isInEffect() && contract.powers.«powerName».isInEffect()) {
+				const obligation = contractState.obligations.«obligationName»
+				if (obligation.«stateMethod»() && contract.powers.«powerName».exerted()) {
+					await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)))
+					return {successful: true}
+				} else {
+					return {successful: false}
+				}
+			} else {
+				return {successful: false}
+			}
+		}'''
 	}
 	
-	def String compileInitMethod (Model model) {
-		val code = '''
-		async Init(ctx, «model.parameters.map[Parameter p | p.name].join(',')») {
-		    const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | p.name].join(',')»)
+	def String generatePowerTransactionForContract(String powerName, String stateMethod) {
+		return '''
+		async power_«stateMethod»Contract(ctx, contractId) {
+		  const contractState = await ctx.stub.getState(contractId)
+		  if (contractState == null) {
+		    return {successful: false}
+		  }
+		  const contract = demarsheller(contractState)
 		
-		    if (contractInstance.activated()) {
-		    	«FOR obligation: obligations»
-		    	contractInstance.obligations.«obligation.name».trigerredUnconditional()
-		    	«ENDFOR»
-		    	«FOR power: powers»
-		    	contractInstance.powers.«power.name».trigerredUnconditional()
-		    	«ENDFOR»
-		
-		      await ctx.stub.putState(contractInstance.id, Buffer.from(JSON.stringify(contractInstance)))
-		
-		      return {successful: true, contractId: contractInstance.id}
+		  if (contract.isInEffect() && contract.powers.«powerName».isInEffect()) {
+		    if (contract.«stateMethod»() && contract.powers.«powerName».exerted()) {
+		      await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)))
+		      return {successful: true}
 		    } else {
 		      return {successful: false}
 		    }
+		  } else {
+		    return {successful: false}
 		  }
+		}'''
+	}
+
+	def List<String> compileEventTriggerMethods(Model model) {
+		val methods = new ArrayList<String>
+		for (variable : eventVariables) {
+			methods.add('''
+				async trigger_«variable.name»(ctx, contractId, event) {
+				    const contractState = await ctx.stub.getState(contractId)
+				    if (contractState == null) {
+				      return {successful: false}
+				    }
+				    const contract = demarsheller(contractState)
+				
+				    if (contract.isInEffect()) {
+				
+				      contract.«variable.name».happen(event)
+				      // sendEvent(new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.happened, '«variable.name»'))
+				
+				      await ctx.stub.putState(contractId, Buffer.from(JSON.stringify(contract)))
+				      return {successful: true}
+				    } else {
+				    	return {successful: false}
+				    }
+				  }
+			''')
+		}
+		return methods
+	}
+
+	def String compileInitMethod(Model model) {
+		val code = '''
+			async Init(ctx, «model.parameters.map[Parameter p | p.name].join(',')») {
+			    const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | p.name].join(',')»)
+			
+			    if (contractInstance.activated()) {
+			    	«FOR obligation : obligations»
+			    		contractInstance.obligations.«obligation.name».trigerredUnconditional()
+			    	«ENDFOR»
+			    	«FOR obligation : survivingObligations»
+			    		contractInstance.survivingObligations.«obligation.name».trigerredUnconditional()
+			    	«ENDFOR»
+			    	«FOR power : powers»
+			    		contractInstance.powers.«power.name».trigerredUnconditional()
+			    	«ENDFOR»
+			
+			      await ctx.stub.putState(contractInstance.id, Buffer.from(JSON.stringify(contractInstance)))
+			
+			      return {successful: true, contractId: contractInstance.id}
+			    } else {
+			      return {successful: false}
+			    }
+			  }
 		'''
 		return code
 	}
-	
-	def void compileContract(IFileSystemAccess2 fsa, Model model) {		
-		val code = '''
-		«FOR asset : assets»
-		import { «asset.name» } from "../assets/«asset.name»"
-		«ENDFOR»
-		«FOR event : events»
-		import { «event.name» } from "../events/«event.name»"
-		«ENDFOR»
-		«FOR role : roles»
-		import { «role.name» } from "../roles/«role.name»"
-		«ENDFOR»
-		«FOR enumeration : enumerations»
-		import { «enumeration.name» } from "../types/«enumeration.name»"
-		«ENDFOR»
-		import { SymboleoContract } from «CONTRACT_CLASS_IMPORT_PATH»
-		import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
-		import { Power } from «POWER_CLASS_IMPORT_PATH»
-		
-		export class «model.contractName» extends SymboleoContract {
-			constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
-				super()
-				«FOR obligation: obligations»
-				this.obligations.«obligation.name» = new Obligation('«obligation.name»', «obligation.creditor», «obligation.debtor», this)
-				«ENDFOR»
-				
-				«FOR power: powers»
-				this.powers.«power.name» = new Power('«power.name»', «power.creditor», «power.debtor», this)
-				«ENDFOR»
 
-				«FOR parameter: model.parameters»
+	// TODO creditor and debotor param
+	def void compileContract(IFileSystemAccess2 fsa, Model model) {
+		val code = '''
+			«FOR asset : assets»
+				import { «asset.name» } from "../assets/«asset.name»"
+			«ENDFOR»
+			«FOR event : events»
+				import { «event.name» } from "../events/«event.name»"
+			«ENDFOR»
+			«FOR role : roles»
+				import { «role.name» } from "../roles/«role.name»"
+			«ENDFOR»
+			«FOR enumeration : enumerations»
+				import { «enumeration.name» } from "../types/«enumeration.name»"
+			«ENDFOR»
+			import { SymboleoContract } from «CONTRACT_CLASS_IMPORT_PATH»
+			import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
+			import { Power } from «POWER_CLASS_IMPORT_PATH»
+			
+			export class «model.contractName» extends SymboleoContract {
+				constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
+					super()
+					«FOR parameter : model.parameters»
 					this.«parameter.name» = «parameter.name»
-				«ENDFOR»
-				
-				«FOR variable: model.variables»
+					«ENDFOR»
+					
+					«FOR obligation : obligations»
+					this.obligations.«obligation.name» = new Obligation('«obligation.name»', «obligation.creditor», «obligation.debtor», this)
+					«ENDFOR»
+					«FOR obligation : survivingObligations»
+					this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «obligation.creditor», «obligation.debtor», this)
+					«ENDFOR»
+					«FOR power : powers»
+					this.powers.«power.name» = new Power('«power.name»', «power.creditor», «power.debtor», this)
+					«ENDFOR»
+			
+					«FOR variable : model.variables»
 					«IF variable.type instanceof RegularType»
 						this.«variable.name» = new «variable.type.name»()
 						«FOR assignment: variable.attributes»
@@ -393,62 +740,93 @@ class SymboleoGenerator extends AbstractGenerator {
 							«ENDIF»	
 						«ENDFOR»
 					«ENDIF»
-				«ENDFOR»
+					«ENDFOR»
+				}
 			}
-		}
-		
 		'''
 		fsa.generateFile("./domain/contracts/" + model.contractName + ".js", code)
 	}
-	
-	def String generateExpressionString (Expression argExpression, String thisString) {
-		switch (argExpression){
-			Or: return generateExpressionString(argExpression.left, thisString) + " || " + generateExpressionString(argExpression.right, thisString)
-			And: return generateExpressionString(argExpression.left, thisString) + " && " + generateExpressionString(argExpression.right, thisString)
-			Equality: return  generateExpressionString(argExpression.left, thisString) + getEqualityOperator(argExpression.op) + generateExpressionString(argExpression.right, thisString)
-			Comparison: return generateExpressionString(argExpression.left, thisString) + argExpression.op + generateExpressionString(argExpression.right, thisString)
-			Plus: return generateExpressionString(argExpression.left, thisString) + " + " + generateExpressionString(argExpression.right, thisString)
-			Minus: return generateExpressionString(argExpression.left, thisString) + " - " + generateExpressionString(argExpression.right, thisString)
-			Multi: return generateExpressionString(argExpression.left, thisString) + " * " + generateExpressionString(argExpression.right, thisString)
-			Div: return generateExpressionString(argExpression.left, thisString) + " / " + generateExpressionString(argExpression.right, thisString)
-			PrimaryExpressionRecursive: return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
-			PrimaryExpressionFunctionCall: return generateFunctionCall(argExpression, thisString)
-			NegatedPrimaryExpression: return "!(" + generateExpressionString(argExpression.expression, thisString) + ")"
-			AtomicExpressionTrue: return "true"
-			AtomicExpressionFalse: return "false"
-			AtomicExpressionDouble: return argExpression.value.toString()
-			AtomicExpressionInt: return argExpression.value.toString()
-			AtomicExpressionEnum: return argExpression.enumeration + "." + argExpression.enumItem
-			AtomicExpressionString: return argExpression.value
-			AtomicExpressionParameter: return generateDotExpressionString(argExpression.value, thisString)
+
+	def String generateExpressionString(Expression argExpression, String thisString) {
+		switch (argExpression) {
+			Or:
+				return generateExpressionString(argExpression.left, thisString) + " || " +
+					generateExpressionString(argExpression.right, thisString)
+			And:
+				return generateExpressionString(argExpression.left, thisString) + " && " +
+					generateExpressionString(argExpression.right, thisString)
+			Equality:
+				return generateExpressionString(argExpression.left, thisString) +
+					getEqualityOperator(argExpression.op) + generateExpressionString(argExpression.right, thisString)
+			Comparison:
+				return generateExpressionString(argExpression.left, thisString) + argExpression.op +
+					generateExpressionString(argExpression.right, thisString)
+			Plus:
+				return generateExpressionString(argExpression.left, thisString) + " + " +
+					generateExpressionString(argExpression.right, thisString)
+			Minus:
+				return generateExpressionString(argExpression.left, thisString) + " - " +
+					generateExpressionString(argExpression.right, thisString)
+			Multi:
+				return generateExpressionString(argExpression.left, thisString) + " * " +
+					generateExpressionString(argExpression.right, thisString)
+			Div:
+				return generateExpressionString(argExpression.left, thisString) + " / " +
+					generateExpressionString(argExpression.right, thisString)
+			PrimaryExpressionRecursive:
+				return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
+			PrimaryExpressionFunctionCall:
+				return generateFunctionCall(argExpression, thisString)
+			NegatedPrimaryExpression:
+				return "!(" + generateExpressionString(argExpression.expression, thisString) + ")"
+			AtomicExpressionTrue:
+				return "true"
+			AtomicExpressionFalse:
+				return "false"
+			AtomicExpressionDouble:
+				return argExpression.value.toString()
+			AtomicExpressionInt:
+				return argExpression.value.toString()
+			AtomicExpressionEnum:
+				return argExpression.enumeration + "." + argExpression.enumItem
+			AtomicExpressionString:
+				return argExpression.value
+			AtomicExpressionParameter:
+				return generateDotExpressionString(argExpression.value, thisString)
 		}
 	}
 
-	def String generateDotExpressionString (Ref argRef, String thisString) {
+	def String generateDotExpressionString(Ref argRef, String thisString) {
 		val ids = new ArrayList<String>()
 		var ref = argRef
-		while (ref instanceof VariableDotExpression){
+		while (ref instanceof VariableDotExpression) {
 			ids.add(ref.tail.name)
-			ref = ref.ref	
+			ref = ref.ref
 		}
 		if (ref instanceof VariableRef) {
-			ids.add((ref as VariableRef).variable)	
+			ids.add((ref as VariableRef).variable)
 		}
 		ids.add(thisString)
 		return ids.reverse().join(".")
 	}
-	
+
 	def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
 		val functionCall = argFunctionCallExp.function
 		switch (functionCall) {
-			TwoArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
-			OneArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
-			TwoArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
-			OneArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+			TwoArgMathFunction:
+				return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+					generateExpressionString(functionCall.arg2, thisString) + ")"
+			OneArgMathFunction:
+				return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+			TwoArgStringFunction:
+				return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+					generateExpressionString(functionCall.arg2, thisString) + ")"
+			OneArgStringFunction:
+				return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
 		}
 	}
-	
-	def String getEqualityOperator(String op) { 
+
+	def String getEqualityOperator(String op) {
 		switch (op) {
 			case '!=': return '!=='
 			case '==': return '==='
@@ -607,7 +985,34 @@ class SymboleoGenerator extends AbstractGenerator {
 	}
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+		assets.removeAll()
+		events.removeAll()
+		roles.removeAll()
+		enumerations.removeAll()
+		parameters.removeAll()
+	
+		obligations.removeAll()
+		survivingObligations.removeAll()
+		powers.removeAll()
+		conditionalObligations.removeAll()
+		conditionalSurvivingObligations.removeAll()
+		conditionalPowers.removeAll()
+	
+		eventVariables.removeAll()
+	
+		obligationTriggerEvents.clear()
+		survivingObligationTriggerEvents.clear()
+		powerTriggerEvents.clear()
+	
+		obligationAntecedentEvents.clear()
+		survivingObligationAntecedentEvents.clear()
+		powerAntecedentEvents.clear()
+	
+		obligationFullfilmentEvents.clear()
+		survivingObligationFullfilmentEvents.clear()
+		
 		for (e : resource.allContents.toIterable.filter(Model)) {
+			System.out.println('generateHFSource: ' + e.domainName)
 			generateHFSource(fsa, e)
 		}
 	}
