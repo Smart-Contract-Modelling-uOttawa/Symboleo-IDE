@@ -143,10 +143,10 @@ DateFunction returns FunctionCall:
 
 // TODO check that creditor and debtor are valid references
 Obligation:
-	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=ID ',' creditor=ID ',' antecedent=Proposition ',' consequent=Proposition ')';
+	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')';
 
 Power:
-	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=ID ',' debtor=ID ',' antecedent=Proposition ',' consequent=PowerFunction ')';
+	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')';
 	
 PowerFunction returns PowerFunction:
 	{PFObligationSuspended} 'Suspended' '(' obligationVariable=[Obligation] ')' | 
@@ -228,16 +228,16 @@ Point:
 	pointExpression=PointExpression;
 
 PointExpression:
-	pointFunction=PointFunction |
-	pointAtom=PointAtom;
+	PointFunction |
+	PointAtom;
 
-PointFunction:
-	name=PointFunctionName '(' pointExpression=PointExpression ',' value=Timevalue ',' timeUnit=TimeUnit ')';
+PointFunction returns PointExpression:
+	{PointFunction} name=PointFunctionName '(' arg=PointExpression ',' value=Timevalue ',' timeUnit=TimeUnit ')';
 
 PointFunctionName:
 	'addTime';
 
-PointAtom:
+PointAtom returns PointExpression:
 	{PointAtomParameterDotExpression} variable=VariableDotExpression | 
 	{PointAtomObligationEvent} obligationEvent=ObligationEvent |
 	{PointAtomContractEvent} contractEvent=ContractEvent |
@@ -245,45 +245,39 @@ PointAtom:
 
 
 Timevalue:
-	value=INT |
-	variable=VariableDotExpression // TODO check type of variable
+	{TimevalueInt} value=INT |
+	{TimevalueVariable} variable=VariableDotExpression // TODO check type of variable
 ;
 
 TimeUnit:
-	'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
+	'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'years';
 
 Interval:
 	intervalExpression=IntervalExpression;
 
 IntervalExpression:
-	intervalFunction=IntervalFunction |
-	intervalAtom=Situation;
-
-IntervalFunction:
-	name=IntervalFunctionName '(' pointExpression=PointExpression ',' pointExpression2=PointExpression ')';
-
-IntervalFunctionName:
-	'Interval';
+	{IntervalFunction} 'Interval' '(' arg1=PointExpression ',' arg2=PointExpression ')' |
+	{SituationExpression} situation=Situation;
 
 Situation:
-	obligationState=ObligationState |
-	contractState=ContractState |
-	powerState=PowerState;
+	ObligationState |
+	ContractState |
+	PowerState;
 
 PowerState:
-	eventName=PowerStateName '(' powerVariable=[Power] ')';
+	stateName=PowerStateName '(' powerVariable=[Power] ')';
 
 PowerStateName:
 	'Create' | 'UnsuccessfulTermination' | 'Active' | 'InEffect' | 'Suspension' | 'SuccessfulTermination';
 
 ObligationState:
-	eventName=ObligationStateName '(' obligationVariable=[Obligation] ')';
+	stateName=ObligationStateName '(' obligationVariable=[Obligation] ')';
 
 ObligationStateName:
 	'Create' | 'Discharge' | 'Active' | 'InEffect' | 'Suspension' | 'Violation' | 'Fulfillment' | 'UnsuccessfulTermination';
 
 ContractState:
-	eventName=ContractStateName '(' 'self' ')';
+	stateName=ContractStateName '(' 'self' ')';
 
 ContractStateName:
 	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
