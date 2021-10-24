@@ -1,0 +1,24 @@
+/* 
+ * Description: make and instantiate an asset module
+ * Challenge: set an asset's attribute
+ * */
+
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Asset1 isAn Asset with owner: String, att1: Number;
+Event1 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, party1: String, party2: String, att_val1 : Number, owner : String)
+
+Declarations
+asset1: Asset1 with owner := owner, att1 := att_val1;
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+event1: Event1;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event1));
+
+endContract

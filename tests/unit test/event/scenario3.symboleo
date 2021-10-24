@@ -1,0 +1,18 @@
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event with att1: String, att2: Date;
+Event2 isAn Event ;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, att_val1 : String, att_val2 : String)
+
+Declarations
+event1: Event1 with att1 := att_val1, att2 := att_val2;
+event2: Event2;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event1));
+Obl2: O(role2, role1, Happens(Violated(Obl1)), Happens(event2)); //violated is not an event in nuXmv. It is a situation. How to expire it?
+
+endContract
