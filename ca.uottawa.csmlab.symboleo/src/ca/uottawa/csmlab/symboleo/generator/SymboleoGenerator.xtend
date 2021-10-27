@@ -130,6 +130,7 @@ class SymboleoGenerator extends AbstractGenerator {
   val conditionalPowers = new ArrayList<Power>
   val allObligations = new ArrayList<Obligation>
   val allSurvivingObligations = new ArrayList<Obligation>
+  val allPowers = new ArrayList<Power>
 
   val eventVariables = new ArrayList<Variable>
 
@@ -205,6 +206,8 @@ class SymboleoGenerator extends AbstractGenerator {
     allObligations.addAll(conditionalObligations)
     allSurvivingObligations.addAll(survivingObligations)
     allSurvivingObligations.addAll(conditionalSurvivingObligations)
+    allPowers.addAll(powers)
+    allPowers.addAll(conditionalPowers)
 
     // triggers
     for (obligation : conditionalObligations) {
@@ -366,6 +369,124 @@ class SymboleoGenerator extends AbstractGenerator {
         ]
       }
     '''
+  }
+  
+  def void compileSerializerFile(IFileSystemAccess2 fsa, Model model) {
+    val code = '''
+    import { «model.contractName» } from "./domain/contract/«model.contractName».js"
+    import { Obligation, ObligationActiveState, ObligationState } from «OBLIGATION_CLASS_IMPORT_PATH»
+    import { InternalEventType, InternalEvent, InternalEventSource} from «EVENTS_CLASS_IMPORT_PATH»
+    import { Event } from «EVENTS_CLASS_IMPORT_PATH»
+    import { Power } from «POWER_CLASS_IMPORT_PATH»
+    import { ContractStates, ContractActiveStates } from «CONTRACT_CLASS_IMPORT_PATH»
+    import { Events } from «EVENTS_CLASS_IMPORT_PATH»
+    import { EventListeners, getEventMap } from "./events.js"
+    
+    export function deserialize(data) {
+      const object = JSON.parse(data)
+      const contract = new «model.contractName»(«model.parameters.map[Parameter p | "object." + p.name].join(',')»)
+      
+      contract.state = object.state
+      contract.activeState = object.activeState
+      
+      for (const eventType of Object.keys(InternalEventType.contract)) {
+        if (object._events[eventType] != null) {
+          const eventObject = new Event()
+          eventObject.triggered = object._events[eventType].triggered
+          eventObject.timestamp = object._events[eventType].timestamp
+          eventObject.data = object._events[eventType].data
+          contract._events[eventType] = eventObject
+        }
+      }
+    
+      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
+        if (object[key].triggered === true) {
+          contract[key].triggered = true
+          contract[key].timestamp = object[key].timestamp
+          contract[key].data = object[key].data
+        }
+      }
+    
+      «FOR obligation : allObligations»
+      if (object.obligations.«obligation.name» != null) {
+        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
+        obligation.state = object.obligations.«obligation.name».state
+        obligation.activeState = object.obligations.«obligation.name».activeState
+        for (const eventType of Object.keys(InternalEventType.obligation)) {
+          if (object.obligations.«obligation.name»._events[eventType] != null) {
+            const eventObject = new Event()
+            eventObject.triggered = object.obligations.«obligation.name»._events[eventType].triggered
+            eventObject.timestamp = object.obligations.«obligation.name»._events[eventType].timestamp
+            eventObject.data = object.obligations.«obligation.name»._events[eventType].data
+            obligation._events[eventType] = eventObject
+          }
+        }
+        contract.obligations.«obligation.name» = obligation
+      }
+      «ENDFOR»
+    
+      «FOR obligation : allSurvivingObligations»
+      if (object.survivingObligations.«obligation.name» != null) {
+        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
+        obligation.state = object.survivingObligations.«obligation.name».state
+        obligation.activeState = object.survivingObligations.«obligation.name».activeState
+        for (const eventType of Object.keys(InternalEventType.obligation)) {
+          if (object.survivingObligations.«obligation.name»._events[eventType] != null) {
+            const eventObject = new Event()
+            eventObject.triggered = object.survivingObligations.«obligation.name»._events[eventType].triggered
+            eventObject.timestamp = object.survivingObligations.«obligation.name»._events[eventType].timestamp
+            eventObject.data = object.survivingObligations.«obligation.name»._events[eventType].data
+            obligation._events[eventType] = eventObject
+          }
+        }
+        contract.survivingObligations.«obligation.name» = obligation
+      }
+      «ENDFOR»
+      
+      «FOR power : allPowers»
+      if (object.powers.«power.name» != null) {
+        const power = new Power('«power.name»', «generateDotExpressionString(power.creditor, "contract")», «generateDotExpressionString(power.creditor, "contract")», contract)
+        power.state = object.powers.«power.name».state
+        power.activeState = object.powers.«power.name».activeState
+        for (const eventType of Object.keys(InternalEventType.power)) {
+          if (object.powers.«power.name»._events[eventType] != null) {
+            const eventObject = new Event()
+            eventObject.triggered = object.powers.«power.name»._events[eventType].triggered
+            eventObject.timestamp = object.powers.«power.name»._events[eventType].timestamp
+            eventObject.data = object.powers.«power.name»._events[eventType].data
+            power._events[eventType] = eventObject
+          }
+        }
+        contract.powers.«power.name» = power
+      }
+      «ENDFOR»
+      return contract
+    }
+    
+    export function serialize(contract) {
+      for (const key of Object.keys(contract.obligations)){
+        contract.obligations[key].contract = undefined
+        contract.obligations[key].creditor = undefined
+        contract.obligations[key].debtor = undefined
+      }
+    
+      for (const key of Object.keys(contract.powers)){
+        contract.powers[key].contract = undefined
+        contract.powers[key].creditor = undefined
+        contract.powers[key].debtor = undefined
+      }
+    
+      for (const key of Object.keys(contract.survivingObligations)){
+        contract.survivingObligations[key].contract = undefined
+        contract.survivingObligations[key].creditor = undefined
+        contract.survivingObligations[key].debtor = undefined
+      }
+    
+      return JSON.stringify(contract)
+    }
+    '''
+    
+    fsa.generateFile("./" + model.contractName + "/" + "serializer.js", code)
   }
 
   // TODO fix terminate contract condition
