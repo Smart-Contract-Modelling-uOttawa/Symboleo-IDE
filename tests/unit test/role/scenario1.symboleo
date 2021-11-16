@@ -4,7 +4,7 @@
  * */
 Domain domain
 Role1 isA Role with att1: String;
-Role2 isA Role with att1: Number;
+Role2 isA Role with att2: Number;
 Asset1 isAn Asset with owner: String;
 Event1 isAn Event;
 endDomain

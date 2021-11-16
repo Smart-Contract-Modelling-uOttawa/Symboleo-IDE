@@ -1,0 +1,22 @@
+/* 
+ * Description: define an event based on another event
+ * Challenge: nested event
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event with att1: String;
+Event2 isAn Event1 with att2: Date;
+endDomain
+
+Contract contr (role : Role1, role2 : Role2, party1: String, party2: String, att_val1 : String, att_val2 : String)
+
+Declarations
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+event2: Event2 with att1 := att_val1, att2 := att_val2;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event2));
+
+endContract

@@ -12,6 +12,7 @@ event1: Event1;
 event2: Event2;
 
 Obligations
-Obl1: O(role1, role2, Happens(event1), Happens(event1) and Happens(event2));
+Obl1: O(role1, role2, true, Happens(event1));
+Obl2: O(role2, role1, Happens(Violated(Obl1)), Happens(event2)); //violated is not an event in nuXmv. It is a situation. How to expire it?
 
 endContract

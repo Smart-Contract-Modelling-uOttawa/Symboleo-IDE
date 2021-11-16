@@ -1,0 +1,37 @@
+/* 
+ * Description: inherit an asset
+ * Challenge: asset inheritance
+ * */
+Domain domain
+Buyer isA Role;
+Seller isA Role;
+Currency isAn Enumeration(CAD, USD, EUR);
+MeatQuality isAn Enumeration(PRIME, AAA, AA, A);
+PerishableGood isAn Asset with quantity: Number, quality: MeatQuality;
+Meat isA PerishableGood;
+Delivered isAn Event with item: Meat, deliverAddress: String, delDueDate: Date;
+Paid isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller, payDueDate: Date;
+PaidLate isAn Event with amunt: Number, currency: Currency, from: Buyer, to: Seller;
+endDomain
+
+Contract contr (buyer : Buyer, seller : Seller, party1: String, party2: String, qnt : Number, qlt : MeatQuality, amt : Number, curr : Currency, payDueDate : Date, delAdd : String, effDate : Date, delDueDateDays : Number, interestRate: Number)
+
+Declarations
+buyer: Buyer with party:= party1;
+seller: Seller with party:= party2;
+goods: Meat with quantity := qnt, quality := qlt;
+delivered: Delivered with item := goods, deliveryAddress := delAdd, delDueDate := delDueDateDays;
+paid: Paid with amount := amt, currency := curr, from := buyer, to := seller, payDueDate := payDueDate;
+paidLate: PaidLate with amount := (1 + interestRate / 2), currency := curr, from := buyer, to := seller;
+
+Obligations
+delivery: O(selle, buyer, true, HappensBefore(delivered, delDueDate));
+payment: O(buyer, seller , true, HappensBefore(paid, payDueDate));
+latePayment: Happens(Violated(payment)) -> O(buyer, seller, true, Happens(paidLate));
+
+Powers
+suspendDelivery : Happens(Violated(payment)) -> Power(seller, buyer, true, Suspended(delivery));
+//resumeDelivery: HappensWithin(paidLae, Suspension(delivery)) -> P(buyer, seller, true, Resumed(delivery));
+
+
+endContract
