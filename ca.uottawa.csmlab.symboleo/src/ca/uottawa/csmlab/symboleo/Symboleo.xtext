@@ -149,13 +149,16 @@ Power:
 	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')';
 	
 PowerFunction returns PowerFunction:
-	{PFObligationSuspended} 'Suspended' '(' obligationVariable=[Obligation] ')' | 
-	{PFObligationResumed} 'Resumed' '(' obligationVariable=[Obligation] ')' | 
-	{PFObligationDischarged} 'Discharged' '(' obligationVariable=[Obligation] ')' |
-	{PFObligationTerminated} 'Terminated' '(' obligationVariable=[Obligation] ')' |
-	{PFContractSuspended} 'Suspended' '(' 'self' ')' | 
-	{PFContractResumed} 'Resumed' '(' 'self' ')' |
-	{PFContractTerminated} 'Terminated' '(' 'self' ')';
+	{PFObligationSuspended} action = 'Suspended' '(' norm = [Obligation] ')' | 
+	{PFObligationResumed} action = 'Resumed' '(' norm = [Obligation] ')' | 
+	{PFObligationDischarged} action = 'Discharged' '(' norm = [Obligation] ')' |
+	{PFObligationTerminated} action = 'Terminated' '(' norm = [Obligation] ')' |
+	//{PFPowerSuspended} action = 'Suspended_' '(' norm = [Power] ')' | 
+	//{PFPowerResumed} action = 'Resumed_' '(' norm = [Power] ')' | 
+	//{PFPowerTerminated} action = 'Terminated_' '(' norm = [Power] ')' |
+	{PFContractSuspended} action = 'Suspended' '(' norm = 'self' ')' | 
+	{PFContractResumed} action = 'Resumed' '(' norm = 'self' ')' |
+	{PFContractTerminated} action = 'Terminated' '(' norm = 'self' ')';
 
 Proposition: POr;
 
@@ -284,4 +287,3 @@ ContractStateName:
 	
 
 // TODO dot navigation for ontology models
-	
