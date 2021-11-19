@@ -3,12 +3,8 @@
 // */
 package ca.uottawa.csmlab.symboleo.generator
 
-import org.eclipse.emf.ecore.resource.Resource
-import org.eclipse.xtext.generator.IFileSystemAccess2
-import org.eclipse.xtext.generator.IGeneratorContext
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType
 import ca.uottawa.csmlab.symboleo.symboleo.RegularType
-import ca.uottawa.csmlab.symboleo.symboleo.Attribute
 import java.util.List
 import ca.uottawa.csmlab.symboleo.symboleo.Model
 import java.util.ArrayList
@@ -86,14 +82,18 @@ import ca.uottawa.csmlab.symboleo.symboleo.TimevalueInt
 import ca.uottawa.csmlab.symboleo.symboleo.IntervalFunction
 import ca.uottawa.csmlab.symboleo.symboleo.PointExpression
 import ca.uottawa.csmlab.symboleo.symboleo.PointAtomParameterDotExpression
-import ca.uottawa.csmlab.symboleo.symboleo.PointAtomObligationEvent
-import java.util.Arrays
 import java.util.UUID
 import ca.uottawa.csmlab.symboleo.symboleo.SituationExpression
-import ca.uottawa.csmlab.symboleo.symboleo.IntervalExpression
 import ca.uottawa.csmlab.symboleo.symboleo.ObligationState
 import ca.uottawa.csmlab.symboleo.symboleo.PowerState
 import ca.uottawa.csmlab.symboleo.symboleo.ContractState
+import org.eclipse.xtext.generator.IFileSystemAccess2
+import ca.uottawa.csmlab.symboleo.symboleo.Attribute
+import org.eclipse.xtext.generator.IGeneratorContext
+import org.eclipse.emf.ecore.resource.Resource
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionIsEqual
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionIsOwner
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionCannotBeAssigned
 
 //
 /**
@@ -102,7 +102,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.ContractState
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
  
- enum predicateType{
+enum predicateType{
 		HAPPENS, HAPPENSBEFORE, HAPPENSAFTER, HAPPENSWITHIN
 	}
 	
@@ -148,6 +148,20 @@ class Tpoint {
 				type = Type.EVENT
 			}	*/		
 		}	
+	}
+}
+
+class DeclarationVariable {
+	public String name
+	public String starter
+	public String type
+	public ArrayList<Pair<String, String>> parameters
+	
+	new(String name, String starter, String type, ArrayList<Pair<String, String>> parameters) {
+		this.name = name
+		this.starter = starter
+		this.type = type
+		this.parameters = parameters
 	}
 }
 
@@ -199,18 +213,15 @@ class SymboleoPCGenerator {
 	val eventVariables = new ArrayList<Variable>
 	val roleVariables = new ArrayList<Variable>
 		
-	val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	val survivingObligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
+	val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>	
 	val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
 	
 	val obligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
 	val obligationConsequentEvents = new HashMap<Obligation, List<PAtomPredicate>>
 	val powerAntecedentEvents = new HashMap<Power, List<PAtomPredicate>>
 	
-//	val obligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-//	val survivingObligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	
-	val pcVariables = new ArrayList<Pair<String,String>>
+	val pcSurvivingObligations = new ArrayList<String>
+	val pcVariables = new ArrayList<DeclarationVariable>
 	val pcSituations = new ArrayList<String>
 	val pcRoles = new ArrayList<String>
 	val pcAssets = new ArrayList<String>
@@ -218,6 +229,7 @@ class SymboleoPCGenerator {
 	val pcEnumerations = new ArrayList<String>
 	val pcParameters =  new ArrayList<String>
 	val pcConstraints = new ArrayList<String>
+	val pcAssignProhibitedNorms = new ArrayList<String>
 	
 	def void parse (Model model) {
 		parameters.addAll(model.parameters)
@@ -245,8 +257,6 @@ class SymboleoPCGenerator {
 				var RegularType base = getBaseType(domainType)
 				if (base !== null) {
 					if (base.ontologyType.name == 'Role') {
-				//		roleInstances.put(param.name, new Pair(base.name, 'party' + rand))
-				//		rand ++
 					}
 					else {
 						pcParameters.add(param.name)
@@ -274,6 +284,23 @@ class SymboleoPCGenerator {
 			}
 		}
 		
+		// extract surviving obligations, antecedents, consequents and triggers
+		for (obligation: model.survivingObligations){
+			obligations.add(obligation)
+			
+			val proposition = obligation.antecedent
+			obligationAntecedentEvents.put(obligation, collectPropositionEvents(proposition))
+			
+			val proposition2 = obligation.consequent
+			obligationConsequentEvents.put(obligation, collectPropositionEvents(proposition2))
+			
+			if (obligation.trigger !== null){
+				val proposition3 = obligation.trigger
+				obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition3))
+			}
+			pcSurvivingObligations.add(obligation.name)
+		}
+		
 		// extract powers, antecedents and triggers
 		for (power: model.powers){
 			powers.add(power)
@@ -298,29 +325,122 @@ class SymboleoPCGenerator {
 			}
 		}
 		
-		for (obligation: model.survivingObligations){
-			if (obligation.trigger !== null){
-				val proposition = obligation.trigger
-				survivingObligationTriggerEvents.put(obligation, collectPropositionEvents(proposition))				
-			}
-			
-			//val proposition = obligation.trigger
-			//survivingObligationFullfilmentEvents.put(obligation, collectPropositionEvents(proposition))
-		}
-		
 		for (constr : model.constraints) {
 			constraints.add(constr)
 		}
 	}
 	
-	def void addVariable (String name, String starterProposition, String variableClass, String attributes) {	
-		
-		var parameters = starterProposition
-		if(attributes !== null) {
-			parameters += attributes
+	def RegularType getBaseType(DomainType domainType) {
+		switch (domainType) {
+			RegularType:
+				if (domainType.ontologyType !== null) {
+					return domainType
+				} else {
+					return getBaseType(domainType.regularType)
+				}
+			default:
+				null
 		}
+	}
+	
+	def String getEvent(PredicateFunction predicate){
+		switch (predicate){
+			PredicateFunctionHappens: return '''«extractEventVariableString(predicate.event)»'''
+			PredicateFunctionHappensBefore: return '''«extractEventVariableString(predicate.event)»'''
+			PredicateFunctionHappensAfter: return '''«extractEventVariableString(predicate.event)»'''
+			PredicateFunctionHappensWithin: return '''«extractEventVariableString(predicate.event)»'''
+		}	
+	}
+	
+	def String getSituations () {
+		var situations = ""
+		for(situation : pcSituations) {
+			situations += situation + "\n"
+		}
+		return situations
+	}
+	
+	def static String eventToSituation (String event) {
+		switch (event) {
+			case "violated": return "violation"
+			case "suspended": return "suspension"
+			case "resumed": return "resumption"
+			case "discharged": return "dischargment"
+			case "expired": return "expirtion"
+			case "fulfilled": return "fulfillment"
+			case "terminated": return "termination"			
+			case "revokedParty": return "unassign"				
+		}
+	}
+	
+	def String generateEventVariableString(Event event){
+		switch (event){
+			VariableEvent: return generateDotExpressionString(event.variable, '')
+			PowerEvent: return '''«event.powerVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''
+			ObligationEvent: return '''«event.obligationVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''			
+			ContractEvent: return '''cnt.state=«eventToSituation(event.eventName.toLowerCase)»'''
+		}	
+	}
+		
+	def String generateVEProposition (String normName, String ev) {
+		return "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + normName + "_debtor._name & " + normName + "_debtor._is_performer)))"
+	}
+	
+	// challenge: convert Happens(violated(obligation)) to a situation
+	def String generateVEFunctionString(String normName, PredicateFunction predicate){		
+		switch (predicate){
+			PredicateFunctionHappens: {
+							predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
+							switch (predicate.event) {
+									VariableEvent: return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''
+									PowerEvent: return '''«generateEventVariableString(predicate.event)»'''
+									ObligationEvent: return '''«generateEventVariableString(predicate.event)»'''		
+									ContractEvent: return '''«generateEventVariableString(predicate.event)»'''
+								}								
+							}
+			PredicateFunctionHappensBefore: {
+					predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+					return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''				
+				}
+			PredicateFunctionHappensAfter: {
+					predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+					return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''					
+				}
+			PredicateFunctionHappensWithin: 
+					if (predicate.interval instanceof IntervalFunction) {
+						val pi = predicate.interval
+						val pe = pi.intervalExpression
+						if (pe instanceof IntervalFunction) {
+							val pa1 = pe.arg1
+							val pa2 = pe.arg2
+							predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
+						}
+						return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''											
+					}
+					/*else {
+						predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
+						return '''HappensWithin(«predicate.event», «predicate.interval»)'''						
+					}*/
+		}	
+	}
+	
+	def String generateViolateExpireString(String normName, Proposition proposition){
+		switch (proposition){
+			POr: return generateViolateExpireString(normName, proposition.left) + "&" + generateViolateExpireString(normName, proposition.right) 
+			PAnd: return generateViolateExpireString(normName, proposition.left) + "|" + generateViolateExpireString(normName, proposition.right) 
+			PAtomRecursive: return "(" + generateViolateExpireString(normName, proposition.inner) + ")"
+			NegatedPAtom: return "(" + generateViolateExpireString(normName, proposition.negated) + ")"
+			PAtomPredicate: return generateVEFunctionString(normName, proposition.predicateFunction)
+		}
+	}
+	
+	def void addVariable (String name, String starterProposition, String variableClass, ArrayList<Pair<String, String>> attributes) {			
+		val p = new DeclarationVariable(name, starterProposition, variableClass, attributes)
 			
-		switch(variableClass) {
+		//val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
+		pcVariables.add(p)
+		
+		/*switch(variableClass) {
 			case 'Event': {
 				val p = new Pair(name, name + " : Event(" + parameters + ");");
 				pcVariables.add(p)
@@ -333,13 +453,7 @@ class SymboleoPCGenerator {
 				val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
 				pcVariables.add(p)
 			}
-		}
-	}
-	
-	def String generatePowerProposition (String powerName, String exertedEventName) {
-		return "(" + powerName + "._active & " + exertedEventName + ".event._happened & " + 
-				exertedEventName + ".event.performer = " + powerName +"_creditor._name & " +
-				 powerName + "_creditor._is_performer )"
+		}*/
 	}
 	
 	def void addSituation (String name, String proposition) {
@@ -352,6 +466,12 @@ class SymboleoPCGenerator {
 		return name + ".state = holds"
 	}
 	
+	def String generatePowerProposition (String powerName, String exertedEventName) {
+		return "(" + powerName + "._active & " + exertedEventName + "._happened & " + 
+				exertedEventName + ".performer = " + powerName +"_creditor._name & " +
+				 powerName + "_creditor._is_performer )"
+	}
+
 	def String generateProposition (String normName, normType ntype, propositionType ptype, String exertedEventName) {
 		switch ptype {
 			case ANTECEDENT: {
@@ -375,6 +495,23 @@ class SymboleoPCGenerator {
 				 }
 			default: return "(" + exertedEventName + ".event._happened" + ")"
 		}
+	}
+	
+	def String generateContractPreconditionSituation(Model model) {
+		var precondition = ""
+		for(cond : model.preconditions){
+			if(precondition.length == 0)
+				precondition += generatePropositionString(null, null, null, cond)
+			else
+				precondition += " & " + generatePropositionString(null, null, null, cond)
+		}
+		
+		if(precondition.length > 0) {
+			var situationName = model.contractName + "_precondition"
+			addSituation(situationName, precondition)
+			return situationName + ".state=holds"
+		}
+		return "TRUE"
 	}
 	
 	def String generateContractTerminationSituation (Model model) {
@@ -609,6 +746,28 @@ class SymboleoPCGenerator {
 				violations.put(obligation.name, situationName + ".state = holds")*/
 		}		
 		
+		for(obligation: model.survivingObligations) {
+			val violation = generateViolateExpireString(obligation.name, obligation.consequent)
+			if (violation !== null){
+				var situationName = obligation.name + "_violated"
+				addSituation(situationName, violation)
+				violations.put(obligation.name, situationName + ".state = holds")
+			}			
+			
+			/*var consEvents = obligationConsequentEvents.get(obligation)
+			var consequent = ""
+			if(consEvents !== null)
+				for(e : consEvents) {
+					var ev = getEvent(e.predicateFunction)
+					if (consequent != "")
+						consequent += " & "
+					consequent += "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer)))"
+				}
+				var situationName = obligation.name + "_violated"
+				addSituation(situationName, consequent)
+				violations.put(obligation.name, situationName + ".state = holds")*/
+		}	
+		
 		return violations
 	}
 	
@@ -616,6 +775,24 @@ class SymboleoPCGenerator {
 		var Map<String, String> expirations = new HashMap<String, String>()
 			
 		for(obligation: model.obligations) {
+			val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
+			if (expiration !== null){
+				var situationName = obligation.name + "_expired"
+				addSituation(situationName, expiration)
+				expirations.put(obligation.name, situationName + ".state = holds")
+			}
+			
+			/*var  antEvents = obligationAntecedentEvents.get(obligation)
+			if(antEvents !== null)
+				for(e : antEvents) {
+					var ev = getEvent(e.predicateFunction)
+					var situationName = obligation.name + "_expired"
+					addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer))")
+					expirations.put(obligation.name, situationName + ".state = holds")
+				}*/
+		}	
+		
+		for(obligation: model.survivingObligations) {
 			val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
 			if (expiration !== null){
 				var situationName = obligation.name + "_expired"
@@ -684,6 +861,15 @@ class SymboleoPCGenerator {
 			}
 		}
 		
+		for(obligation: model.survivingObligations) {
+			val antecedent = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.ANTECEDENT, obligation.antecedent)
+			if(antecedent !== null && antecedent != "TRUE") {
+				val sname = obligation.name + "_antecedent"
+				addSituation(sname, antecedent)
+				situations.put(obligation.name, sname + ".state = holds")			
+			}
+		}
+		
 		for(power: model.powers) {
 			val antecedent = generatePropositionString(power.name, normType.POWER, propositionType.ANTECEDENT, power.antecedent)
 			if(antecedent !== null && antecedent != "TRUE") {
@@ -705,6 +891,12 @@ class SymboleoPCGenerator {
 			situations.put(obligation.name, sname + ".state = holds")
 		}
 		
+		for(obligation: model.survivingObligations) {
+			val sname = obligation.name + "_consequent"
+			addSituation(sname, generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.CONSEQUENT, obligation.consequent))
+			situations.put(obligation.name, sname + ".state = holds")
+		}
+		
 		return situations
 	}
 	
@@ -712,6 +904,16 @@ class SymboleoPCGenerator {
 		var Map<String, String> situations = new HashMap<String, String>()
 			
 		for(obligation: model.obligations) {
+			val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
+			
+			if(trigger !== null && trigger != 'TRUE') {
+				val sname = obligation.name + "_trigger"
+				addSituation(sname, trigger)
+				situations.put(obligation.name, sname + ".state = holds")			
+			}
+		}
+		
+		for(obligation: model.survivingObligations) {
 			val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
 			
 			if(trigger !== null && trigger != 'TRUE') {
@@ -824,14 +1026,6 @@ class SymboleoPCGenerator {
 		return situations
 	}*/
 	
-	def String returnSituations () {
-		var situations = ""
-		for(situation : pcSituations) {
-			situations += situation + "\n"
-		}
-		return situations
-	}
-	
 	def List<PAtomPredicate> collectPropositionEvents(Proposition proposition){
 		val list = new ArrayList<PAtomPredicate>
 		switch (proposition){
@@ -864,22 +1058,44 @@ class SymboleoPCGenerator {
 		return list
 	}
 	
-	def String generatePropositionString(String normName, normType nType, propositionType pType, Proposition proposition){
-		switch (proposition){
-			POr: return generatePropositionString(normName, nType, pType, proposition.left) + "|" + generatePropositionString(normName, nType, pType, proposition.right) 
-			PAnd: return generatePropositionString(normName, nType, pType, proposition.left) + "&" + generatePropositionString(normName, nType, pType, proposition.right) 
-			PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
-			PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
-			PAtomRecursive: return "(" + generatePropositionString(normName, nType, pType, proposition.inner) + ")"
-			NegatedPAtom: return "!(" + generatePropositionString(normName, nType, pType, proposition.negated) + ")"
-			PAtomPredicate: return generatePredicateFunctionString(normName, nType, pType, proposition.predicateFunction)
-			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
-			PAtomVariable: return generateDotExpressionString(proposition.variable, 'this')
-			PAtomPredicateTrueLiteral: return "TRUE"
-			PAtomPredicateFalseLiteral: return "FALSE" 
-			PAtomDoubleLiteral: return proposition.value.toString
-			PAtomIntLiteral: return proposition.value.toString
-			PAtomStringLiteral: return proposition.value
+	def static String generateDotExpressionString (Ref argRef, String thisString) {
+		val ids = new ArrayList<String>()
+		var ref = argRef
+		while (ref instanceof VariableDotExpression){
+			ids.add(ref.tail.name)
+			ref = ref.ref	
+		}
+		if (ref instanceof VariableRef) {
+			ids.add((ref as VariableRef).variable)	
+		}
+		if (thisString !== null)
+			ids.add(thisString)
+		
+		var revIds = ids.reverse()
+		var expression = ""
+		for(id : revIds)
+			if(expression === ""){
+				expression = id
+			} else {
+				expression += "." + id
+			}
+				
+		return expression
+	}
+	
+	def String extractEventVariableString(Event event){
+		switch (event){
+			VariableEvent: return generateDotExpressionString(event.variable, '')
+			PowerEvent: return '''«event.eventName.toLowerCase»'''
+			ObligationEvent: return '''«event.eventName.toLowerCase»'''
+			ContractEvent: return '''«event.eventName.toLowerCase»'''
+		}	
+	}
+	
+	def String getEqualityOperator(String op) { 
+		switch (op) {
+			case '!=': return '!=='
+			case '==': return '==='
 		}
 	}
 	
@@ -895,14 +1111,22 @@ class SymboleoPCGenerator {
 									ContractEvent: return '''«generateEventVariableString(predicate.event)»'''
 								}								
 							}
-			PredicateFunctionHappensBefore: {
-					predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''				
-				}
+			PredicateFunctionHappensBefore: {				
+				val constraint = generateConstraint(predicate)	
+				val event1 = extractEventVariableString(predicate.event)
+				predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, event1, predicate.point.pointExpression))
+				if(constraint !== null)
+					return '''«generateProposition(normName, nType, pType, event1)» & «constraint»'''		
+				return '''«generateProposition(normName, nType, pType, event1)»'''		
+			}
 			PredicateFunctionHappensAfter: {
-					predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''					
-				}
+				val constraint = generateConstraint(predicate)
+				val event1 = extractEventVariableString(predicate.event)
+				predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, event1, predicate.point.pointExpression))
+				if(constraint !== null)
+					return '''«generateProposition(normName, nType, pType, event1)» & «constraint»'''		
+				return '''«generateProposition(normName, nType, pType, event1)»'''				
+			}
 			PredicateFunctionHappensWithin: {					
 					//predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
 					//return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''
@@ -931,122 +1155,78 @@ class SymboleoPCGenerator {
 						
 							return '''HappensWithin(«predicate.event», «predicate.interval»)'''	
 						}
-											
 					}			
 				}
+			PredicateFunctionIsEqual: {
+				return predicate.arg1 + " = " + predicate.arg2
+			}
+			PredicateFunctionIsOwner: {
+				return predicate.arg1 + "._owner = " + predicate.arg2 + ".role._party"
+			}
+			PredicateFunctionCannotBeAssigned: {
+				pcAssignProhibitedNorms.add(predicate.arg1)
+				return null
+			}
 		}	
 	}
 	
-	def String generateViolateExpireString(String normName, Proposition proposition){
+	def String generatePropositionString(String normName, normType nType, propositionType pType, Proposition proposition){
 		switch (proposition){
-			POr: return generateViolateExpireString(normName, proposition.left) + "&" + generateViolateExpireString(normName, proposition.right) 
-			PAnd: return generateViolateExpireString(normName, proposition.left) + "|" + generateViolateExpireString(normName, proposition.right) 
-			//PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
-			//PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
-			PAtomRecursive: return "(" + generateViolateExpireString(normName, proposition.inner) + ")"
-			NegatedPAtom: return "(" + generateViolateExpireString(normName, proposition.negated) + ")"
-			PAtomPredicate: return generateVEFunctionString(normName, proposition.predicateFunction)
-			//PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
-			//PAtomVariable: return generateDotExpressionString(proposition.variable, 'this')
-			//PAtomPredicateTrueLiteral: return "FALSE"
-			//PAtomPredicateFalseLiteral: return "TRUE" 
-			//PAtomDoubleLiteral: return proposition.value.toString
-			//PAtomIntLiteral: return proposition.value.toString
-			//PAtomStringLiteral: return proposition.value
+			POr: return generatePropositionString(normName, nType, pType, proposition.left) + " | " + generatePropositionString(normName, nType, pType, proposition.right) 
+			PAnd: return generatePropositionString(normName, nType, pType, proposition.left) + " & " + generatePropositionString(normName, nType, pType, proposition.right) 
+			PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
+			PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
+			PAtomRecursive: return "(" + generatePropositionString(normName, nType, pType, proposition.inner) + ")"
+			NegatedPAtom: return "!(" + generatePropositionString(normName, nType, pType, proposition.negated) + ")"
+			PAtomPredicate: return generatePredicateFunctionString(normName, nType, pType, proposition.predicateFunction)
+			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
+			PAtomVariable: return generateDotExpressionString(proposition.variable, 'this')
+			PAtomPredicateTrueLiteral: return "TRUE"
+			PAtomPredicateFalseLiteral: return "FALSE" 
+			PAtomDoubleLiteral: return proposition.value.toString
+			PAtomIntLiteral: return proposition.value.toString
+			PAtomStringLiteral: return proposition.value
 		}
 	}
 	
-	// challenge: convert Happens(violated(obligation)) to a situation
-	def String generateVEFunctionString(String normName, PredicateFunction predicate){		
+	def Boolean isEvent(String ev) {
+		for(e:eventVariables) {
+			if(e.name.equals(ev))
+				return true
+		}
+		return false
+	}
+	
+	def String generateConstraint(PredicateFunction predicate) {
 		switch (predicate){
 			PredicateFunctionHappens: {
-							predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
-							switch (predicate.event) {
-									VariableEvent: return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''
-									PowerEvent: return '''«generateEventVariableString(predicate.event)»'''
-									ObligationEvent: return '''«generateEventVariableString(predicate.event)»'''		
-									ContractEvent: return '''«generateEventVariableString(predicate.event)»'''
-								}								
-							}
+				return null
+			}				
 			PredicateFunctionHappensBefore: {
-					predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''				
-				}
+				val expression= predicate.point.pointExpression
+				if(expression instanceof PointAtomParameterDotExpression){
+					val event2 = generateDotExpressionString(expression.variable, null)
+					if(isEvent(event2))
+						return "!(" + event2 + ".event._happened" + ")"
+				}	
+				return null
+			}
 			PredicateFunctionHappensAfter: {
-					predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''					
-				}
-			PredicateFunctionHappensWithin: 
-					if (predicate.interval instanceof IntervalFunction) {
-						val pi = predicate.interval
-						val pe = pi.intervalExpression
-						if (pe instanceof IntervalFunction) {
-							val pa1 = pe.arg1
-							val pa2 = pe.arg2
-							predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
-						}
-						return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''											
-					}
-					/*else {
-						predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
-						return '''HappensWithin(«predicate.event», «predicate.interval»)'''						
-					}*/
-		}	
-	}
-	
-	def String generateVEProposition (String normName, String ev) {
-		return "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + normName + "_debtor._name & " + normName + "_debtor._is_performer)))"
-	}
-	
-	def String getEvent(PredicateFunction predicate){
-		switch (predicate){
-			PredicateFunctionHappens: return '''«extractEventVariableString(predicate.event)»'''
-			PredicateFunctionHappensBefore: return '''«extractEventVariableString(predicate.event)»'''
-			PredicateFunctionHappensAfter: return '''«extractEventVariableString(predicate.event)»'''
-			PredicateFunctionHappensWithin: return '''«extractEventVariableString(predicate.event)»'''
-		}	
-	}
-	def String extractEventVariableString(Event event){
-		switch (event){
-			VariableEvent: return generateDotExpressionString(event.variable, '')
-			PowerEvent: return '''«event.eventName.toLowerCase»'''
-			ObligationEvent: return '''«event.eventName.toLowerCase»'''
-			ContractEvent: return '''«event.eventName.toLowerCase»'''
-		}	
-	}
-	
-	def static String eventToSituation (String event) {
-		switch (event) {
-			case "violated": return "violation"
-			case "suspended": return "suspension"
-			case "resumed": return "resumption"
-			case "discharged": return "dischargment"
-			case "expired": return "expirtion"
-			case "fulfilled": return "fulfillment"
-			case "terminated": return "termination"			
-			case "revokedParty": return "unassign"				
+				val expression= predicate.point.pointExpression
+				if(expression instanceof PointAtomParameterDotExpression){
+					val event2 = generateDotExpressionString(expression.variable, null)
+					if(isEvent(event2))
+						return "(" + event2 + ".event._happened" + ")"					
+				}			
+				return null
+			}
+			PredicateFunctionHappensWithin: {
+				return null
+			}
 		}
 	}
 	
-	def String generateEventVariableString(Event event){
-		switch (event){
-			VariableEvent: return generateDotExpressionString(event.variable, '')
-			PowerEvent: return '''«event.powerVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''
-			ObligationEvent: return '''«event.obligationVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''			
-			ContractEvent: return '''cnt.state=«eventToSituation(event.eventName.toLowerCase)»'''
-		}	
-	}
-	
-	def String eventType(Event event){
-		switch (event){
-			VariableEvent: return "event"
-			PowerEvent: return "situation"
-			ObligationEvent: return "situation" 			
-			ContractEvent: return "situation"
-		}
-	}	
-	
-	def String generateExpressionString (Expression argExpression, String thisString) {
+	def String generateExpressionString(Expression argExpression, String thisString) {
 		switch (argExpression){
 			Or: return generateExpressionString(argExpression.left, thisString) + " || " + generateExpressionString(argExpression.right, thisString)
 			And: return generateExpressionString(argExpression.left, thisString) + " && " + generateExpressionString(argExpression.right, thisString)
@@ -1069,31 +1249,6 @@ class SymboleoPCGenerator {
 		}
 	}
 
-	def public static String generateDotExpressionString (Ref argRef, String thisString) {
-		val ids = new ArrayList<String>()
-		var ref = argRef
-		while (ref instanceof VariableDotExpression){
-			ids.add(ref.tail.name)
-			ref = ref.ref	
-		}
-		if (ref instanceof VariableRef) {
-			ids.add((ref as VariableRef).variable)	
-		}
-		if (thisString != null)
-			ids.add(thisString)
-		
-		var revIds = ids.reverse()
-		var expression = ""
-		for(id : revIds)
-			if(expression === ""){
-				expression = id
-			} else {
-				expression += "." + id
-			}
-				
-		return expression
-	}
-	
 	def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
 		val functionCall = argFunctionCallExp.function
 		switch (functionCall) {
@@ -1104,28 +1259,8 @@ class SymboleoPCGenerator {
 		}
 	}
 	
-	def String getEqualityOperator(String op) { 
-		switch (op) {
-			case '!=': return '!=='
-			case '==': return '==='
-		}
-	}
-
-	def RegularType getBaseType(DomainType domainType) {
-		switch (domainType) {
-			RegularType:
-				if (domainType.ontologyType !== null) {
-					return domainType
-				} else {
-					return getBaseType(domainType.regularType)
-				}
-			default:
-				null
-		}
-	}
-	
-	 // Generate generic modules
-	 def String generateStaticModules () {
+	// Generate generic modules
+	def String generateStaticModules () {
 		val code = '''
 		MODULE Timer(start)
 		 VAR active1  : boolean;
@@ -1382,28 +1517,41 @@ class SymboleoPCGenerator {
 	 * Generate domain modules
 	 */
 	def void generateEnumeration(IFileSystemAccess2 fsa, Enumeration enumeration) {
-		val code = '''	
-			  	«FOR item : enumeration.enumerationItems»
-			  		«IF enumeration.enumerationItems.indexOf(item) == enumeration.enumerationItems.size()-1 »
-			  		"«item.name»"
-			  		«ELSE»
-			  		"«item.name»",
-			  		«ENDIF»
-			  	«ENDFOR»
-		'''
-		pcEnumerations.add(code)
+		var enums = ""
+		for(item : enumeration.enumerationItems) {
+			if(enums.length == 0) 
+				enums += '"' + item.name + '"'
+			else
+				enums += ',' + '"' + item.name + '"'
+		}
+ 	
+		pcEnumerations.add(enums)
 	}
 
 	def void generateEvent(IFileSystemAccess2 fsa, RegularType event) {
 		val isBase = event.ontologyType !== null
 
 		if (isBase === true) {
+			
+			// extract attributes of parents
+			var parameters = '''
+			«FOR att : event.attributes»
+			«generateAssetParameters(att)»
+			«ENDFOR»
+			'''
+			
+			// trim parameters
+			parameters = parameters.replace("\r\n", "")
+			if(parameters.length() > 1)
+				parameters = parameters.substring(0, parameters.length()-2)
+			
+			// make nuXmv module
 			val code = '''
 				«IF event.attributes.size()>0»
-					MODULE «event.name»(start, «event.attributes.map[Attribute a | a.name].join(',')»)
+					MODULE «event.name»(start, «parameters»)
 						DEFINE
 							«FOR attribute : event.attributes»
-								_«attribute.name» := «attribute.name»;
+							«generateAssetAttributes(attribute)»
 							«ENDFOR»
 				«ELSE»
 					MODULE «event.name»(start)
@@ -1417,12 +1565,28 @@ class SymboleoPCGenerator {
 			val allAttributes = Helpers.getAttributesOfRegularType(event)
 			val parentAttributes = new ArrayList<Attribute>(allAttributes)
 			parentAttributes.removeAll(event.attributes)
+			
+			
+			// extract attributes of parents
+			var parameters = '''
+			«FOR att : event.attributes»
+			«generateAssetParameters(att)»
+			«ENDFOR»
+			«FOR att : parentAttributes»
+			«generateAssetParameters(att)»
+			«ENDFOR»
+			'''
+			
+			// trim parameters
+			parameters = parameters.replace("\r\n", "")
+			parameters = parameters.substring(0, parameters.length()-2)
+			
 			val code = '''
 				«IF allAttributes.size()>0»
-					MODULE «event.name»(start, «allAttributes.map[Attribute a | a.name].join(',')»)
+					MODULE «event.name»(start, «parameters»)
 						DEFINE
 							«FOR attribute : event.attributes»
-								_«attribute.name» := «attribute.name»;
+							«generateAssetAttributes(attribute)»
 							«ENDFOR»
 				«ELSE»
 					MODULE «event.name»(start)
@@ -1444,10 +1608,12 @@ class SymboleoPCGenerator {
 				«ELSE»
 					MODULE «role.name»(party)
 				«ENDIF»
+				«IF role.attributes.length > 0»
 					DEFINE
 						«FOR attribute : role.attributes»
 							_«attribute.name» := «attribute.name»;
 						«ENDFOR»
+				«ENDIF»
 					VAR
 						role : Role(party);
 			'''
@@ -1463,10 +1629,12 @@ class SymboleoPCGenerator {
 				«ELSE»
 					MODULE «role.name»(party)
 				«ENDIF»
+				«IF role.attributes.length > 0»
 					DEFINE
 						«FOR attribute : role.attributes»
 							_«attribute.name» := «attribute.name»;
 						«ENDFOR»
+				«ENDIF»
 					VAR
 						role : «parentType.name»(party, «parentAttributes.map[Attribute a | a.name].join(',')»);
 			'''
@@ -1495,7 +1663,7 @@ class SymboleoPCGenerator {
 		return code
 	}
 	
-	def String generateConstrants() {
+	def String generateConstants() {
 		val norms= new ArrayList<String>
 		for(obligation : obligations) 
 			norms.add('"' + obligation.name + '"')
@@ -1504,13 +1672,12 @@ class SymboleoPCGenerator {
 			norms.add('"' + power.name + '"')
 		
 		if(pcEnumerations.size() > 0) {
-			return pcEnumerations.join(",") + ',' + String.join(", ", norms) + ';';			
+			return pcEnumerations.join(",") + ',' + String.join(",", norms) + ';';			
 		}
 		else
-			return String.join(", ", norms) + ';';
+			return String.join(",", norms) + ';';
 	}
 	
-	// challenge: difficult to map attributes and parties, written in parameters, to roles
 	def String generateRoleInstances() {
 		val code = '''
 		«FOR Map.Entry<String, Pair<String, String>> entry : roleInstances.entrySet()»
@@ -1520,14 +1687,12 @@ class SymboleoPCGenerator {
 		return code
 	}
 	
-	def String generateContractParameters(Model model) {
-	}
-	
 	/**
 	 * Description: convert Symboleo’s contract concept to SymboleoPC’s module
 	 * Principle: 2
 	 */
 	def void compileContract(IFileSystemAccess2 fsa, Model model) {
+		var cntPrecondition = generateContractPreconditionSituation(model);
 		var cntTermination = generateContractTerminationSituation(model);
 		var cntSuspension = generateContractSuspensionSituation(model);
 		var cntResumption = generateContractResumptionSituation(model);
@@ -1553,22 +1718,23 @@ class SymboleoPCGenerator {
 		MODULE «model.contractName» («pcParameters.join(', ')»)
 		
 			CONSTANTS
-			«generateConstrants()»
+			«generateConstants()»
 			
 			VAR
 				«compileDeclarationVariables(model)»
 				
 				cnt_succ_Termination : Situation((cnt.state=inEffect)
 				«FOR obligation: obligations» 
+				«IF !pcSurvivingObligations.contains(obligation.name)»
 				& !(«obligation.name»._active)
+				«ENDIF»
 				«ENDFOR»
 				);
 				
-				«returnSituations()»
+				«getSituations()»
 				
-				cnt: Contract(TRUE, TRUE, «cntTermination», «cntSuspension», «cntResumption», FALSE, FALSE, cnt_succ_Termination.state=holds);
+				cnt: Contract(«cntPrecondition», TRUE, «cntTermination», «cntSuspension», «cntResumption», FALSE, FALSE, cnt_succ_Termination.state=holds);
 								
-				
 				«FOR obligation: obligations»
 				«val antecedent = antecedents.get(obligation.name) !== null ? antecedents.get(obligation.name) : "TRUE"»
 				«val consequent = consequents.get(obligation.name)»
@@ -1580,9 +1746,9 @@ class SymboleoPCGenerator {
 				«val oblViol = oblsViolated.get(obligation.name) !== null ? oblsViolated.get(obligation.name) : "FALSE"»
 				«val oblExp = oblsExpired.get(obligation.name) !== null ? oblsExpired.get(obligation.name) : "FALSE"»
 				«val oblAct = "FALSE"»
+				«val isSurviving = pcSurvivingObligations.contains(obligation.name) ? "TRUE" : "FALSE"»
 				«val oblName = obligation.name»
-				
-				«oblName» : Obligation("«oblName»", FALSE, cnt._o_activated, «cntTermination», «consequent», «trigger», «oblViol», «oblAct», «oblExp», «oblSus», «cntSuspension», «oblTerm», «oblRes», «cntResumption», «oblDisc», «antecedent»);		
+				«oblName» : Obligation("«oblName»", «isSurviving», cnt._o_activated, «cntTermination», «consequent», «trigger», «oblViol», «oblAct», «oblExp», «oblSus», «cntSuspension», «oblTerm», «oblRes», «cntResumption», «oblDisc», «antecedent»);		
 				«ENDFOR»
 				
 				«FOR power: powers»
@@ -1595,7 +1761,6 @@ class SymboleoPCGenerator {
 				«val powName = power.name»
 				«val powExe = powsExerted.get(power.name) !== null ? powsExerted.get(power.name) : "FALSE"»
 				«val powExp = powsExpired.get(power.name) !== null ? powsExpired.get(power.name) : "FALSE"»
-				
 				«power.name» : Power("«powName»", cnt._o_activated, «trigger», «powAct», «powExp», «powSus», «cntSuspension», «powTerm», «powExe», «powRes», «cntResumption», «antecedent»);
 				«ENDFOR»
 				
@@ -1634,9 +1799,10 @@ class SymboleoPCGenerator {
 		«FOR asset : assets»
 		«IF asset.name == astname»
 		«FOR embatt : asset.attributes»
-		«generateAssetAttributes(embatt)»
-		«{done = true; null}»
+		«val parentAtt = generateAssetAttributes(embatt)»
+		«parentAtt.replaceAll(".*_owner :=.*(\r | \r\n)?", "")»		
 		«ENDFOR»
+		«{done = true; null}»
 		«ENDIF»
 		«ENDFOR»
 		«ENDIF»
@@ -1661,41 +1827,49 @@ class SymboleoPCGenerator {
 		«FOR asset : assets»
 		«IF asset.name == astname»
 		«FOR embatt : asset.attributes»
-		«generateAssetParameters(embatt)»
-		«{done = true; null}»
+		«var parentAst = generateAssetParameters(embatt)»
+		«parentAst.replaceAll("owner,", "")»
 		«ENDFOR»
+		«{done = true; null}»
 		«ENDIF»
 		«ENDFOR»
 		«ENDIF»
 		«ENDIF»
 		«ENDIF»
 		«IF !done»
-			«att.name»,
+			«att.name», 
 		«ENDIF»
 		'''
-		return code.substring(0, code.length()-1)
+		return code
 	}
 	
 	def void generateAsset(IFileSystemAccess2 fsa, RegularType asset) {
 		val isBase = asset.ontologyType !== null
 		
-		// challenge: add owner as a keyword and a default attribute of assets
-		
+		// challenge: add owner as a keyword and a default attribute of assets		
 		if (isBase === true) {
-			val parameters = '''
+			var parameters = '''
 			«FOR att : asset.attributes»
 			«generateAssetParameters(att)»
 			«ENDFOR»
 			'''
 			
+			// trim parameters
+			parameters = parameters.replace("\r\n", "")
+			if(parameters.length() > 1)
+				parameters = parameters.substring(0, parameters.length()-2)
+			
+			// make nuXmv module
 			val code = '''
-				MODULE «asset.name» («parameters»)
 				«IF asset.attributes.size()>0»
-					DEFINE 
-						«FOR attribute : asset.attributes»
-						«generateAssetAttributes(attribute)»
-						«ENDFOR»
-				«ENDIF»				
+					MODULE «asset.name» («parameters»)
+						DEFINE 
+							«FOR attribute : asset.attributes»
+							«generateAssetAttributes(attribute)»
+							«ENDFOR»
+				«ELSE»
+					MODULE «asset.name» ()	
+				«ENDIF»		
 				VAR
 					asset:Asset(owner);
 			'''
@@ -1706,14 +1880,39 @@ class SymboleoPCGenerator {
 			val parentAttributes = new ArrayList<Attribute>(allAttributes)
 			parentAttributes.removeAll(asset.attributes)
 			
-			val parameters = '''
-			«FOR att : asset.attributes»
-			«generateAssetParameters(att)»
-			«ENDFOR»
-			«FOR att : parentAttributes»
-			«generateAssetParameters(att)»
-			«ENDFOR»
-			'''
+			var parameters = ""
+			for(att : asset.attributes) {
+				var param = generateAssetParameters(att)
+				
+				// trim parameters
+				param = param.replace("\r\n", "")
+				if(param.length() > 1){
+					param = param.substring(0, param.length()-2)
+					parameters += param
+				}
+			}
+			
+			var parentParams = ""
+			for(att : parentAttributes) {
+				var param = generateAssetParameters(att)
+								
+				// trim parameters
+				param = param.replace("\r\n", "")
+				if(param.length() > 1){
+					param = param.substring(0, param.length()-2)
+					
+					if(!param.equals("owner")){
+						if(parameters.length == 0)
+							parameters += param
+						else 
+							parameters += ', ' + param						
+					}
+					if(parentParams.length == 0)
+						parentParams += param
+					else
+						parentParams += ', ' + param
+				}
+			}
 			
 			val code = '''
 				MODULE «asset.name» («parameters»)
@@ -1723,11 +1922,13 @@ class SymboleoPCGenerator {
 							«generateAssetAttributes(attribute)»
 						«ENDFOR»
 						«FOR attribute : parentAttributes»
+						«IF !attribute.name.equals("owner")»
 							«generateAssetAttributes(attribute)»
+						«ENDIF»
 						«ENDFOR»
 				«ENDIF»
 				VAR
-					asset:«parentType.name»(«parameters»);
+					asset:«parentType.name»(«parentParams»);
 			'''
 			pcAssets.add(code)
 		}
@@ -1738,6 +1939,35 @@ class SymboleoPCGenerator {
 		var String situation = "";
 			
 		for(obligation: model.obligations) {
+			var propositions = obligationAntecedentEvents.get(obligation)
+			if(propositions !== null)
+				for(p : propositions) {				
+					var ev = getEvent(p.predicateFunction)
+					if(ev.equals(eventName)){
+						situations.add(obligation.name + ".state=create")					
+					}
+				}	
+			
+			propositions = obligationConsequentEvents.get(obligation)
+			if(propositions !== null)
+				for(p : propositions) {
+					var ev = getEvent(p.predicateFunction)
+					if(ev.equals(eventName)){
+						situations.add(obligation.name + ".state=inEffect")
+					}	
+				}	
+			
+			propositions = obligationTriggerEvents.get(obligation)
+			if(propositions !== null)
+				for(p : propositions) {
+					var ev = getEvent(p.predicateFunction)
+					if(ev.equals(eventName)){
+						situations.add("cnt.state=inEffect")
+					}
+				}		
+		}
+		
+		for(obligation: model.survivingObligations) {
 			var propositions = obligationAntecedentEvents.get(obligation)
 			if(propositions !== null)
 				for(p : propositions) {				
@@ -1799,38 +2029,53 @@ class SymboleoPCGenerator {
 	}
 	
 	def void addDeclarationVariables (Model model) {	
-		// challenge: assume that attributes are on the same order as definition
 		for(variable: model.variables) {		
 			var situation = generateEventInitSituation(model, variable.name);
-			var assgs = new ArrayList<String>
+			var assgs = new ArrayList<Pair<String, String>>
 			
 			if(variable.type instanceof RegularType)
 				for(assignment: variable.attributes)
-					if(assignment instanceof AssignVariable)
-						assgs.add(generateDotExpressionString(assignment.value, null))
+					if(assignment instanceof AssignVariable){
+						var found = false
+						val asgexp = generateDotExpressionString(assignment.value, null)
+ 						for(ast:pcVariables) {
+							if(ast.name.equals(asgexp)) {
+								for(p:ast.parameters) {
+									if(!p.key.equals("owner"))
+										assgs.add(p)									
+									}
+								found = true
+							}							
+						}
+						if(!found) {
+							assgs.add(new Pair(assignment.name, generateDotExpressionString(assignment.value, null)))							
+							}					
+					}
 					else if(assignment instanceof AssignExpression)
-						assgs.add(generateExpressionString(assignment.value, null))
-
-			var String attributes = ""
-			for(item : assgs) {
-				if(attributes.length === 0 && situation.length === 0)
-					attributes += item
-				else
-					attributes += ',' + item
-			}
-			
-			addVariable(variable.name, situation, variable.type.name, attributes)
+						assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))
+			addVariable(variable.name, situation, variable.type.name, assgs)
 		}
 	}
 	
 	def String compileDeclarationVariables(Model model) {
 		addDeclarationVariables(model)
 		
-		val code = '''
-			«FOR variable : pcVariables»			
-				«variable.getValue()»
-			«ENDFOR»
-			'''
+		var code = ""
+		for(variable : pcVariables) {
+			var params = ""
+			if(variable.starter.length > 0)
+				params += variable.starter
+			
+			if(variable.parameters !== null)
+				for(param : variable.parameters) {
+					if(params.length > 0)
+						params += ", " + param.value
+					else
+						params += param.value
+				}			
+			code += variable.name + " :" + variable.type + "(" + params + ");\n"
+		}
+
 		return code;
 	}
 	
@@ -1895,9 +2140,9 @@ class SymboleoPCGenerator {
 		val iconstr = '''«pcConstraints.size() > 0 ? pcConstraints.join(' & ') : ""»'''
 		
 		if(econstr.length() > 0 && iconstr.length() > 0)
-			return "INVAR " + iconstr + ' & ' + econstr
+			return "INVAR \n" + iconstr + ' & ' + econstr
 		else if (econstr.length() > 0 || iconstr.length() > 0)
-			return "INVAR " + iconstr + econstr
+			return "INVAR \n" + iconstr + econstr
 	}
 	
 	def String compileParties() {
