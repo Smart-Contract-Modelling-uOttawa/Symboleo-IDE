@@ -151,6 +151,7 @@ class SymboleoGenerator extends AbstractGenerator {
     compileContract(fsa, model)
     compileTransactionFile(fsa, model)
     compileEventsFile(fsa, model)
+    compileSerializerFile(fsa, model)
     generateNPMFile(fsa, model)
   }
 
@@ -357,7 +358,7 @@ class SymboleoGenerator extends AbstractGenerator {
     // contract termination
     for (obligation : allObligations) {
       arrays.
-        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
+        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
     }
 
     return '''
@@ -489,7 +490,6 @@ class SymboleoGenerator extends AbstractGenerator {
     fsa.generateFile("./" + model.contractName + "/" + "serializer.js", code)
   }
 
-  // TODO fix terminate contract condition
   def void compileEventsFile(IFileSystemAccess2 fsa, Model model) {
 
     val code = '''
@@ -508,7 +508,16 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(obligation.trigger)») {
               contract.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
               «IF (!obligationAntecedentEvents.containsKey(obligation))»
-              contract.obligations.«obligation.name».trigerredUnconditional()
+              if («generatePropositionString(obligation.antecedent)») {
+                contract.obligations.«obligation.name».trigerredUnconditional()
+                «IF (!obligationFullfilmentEvents.containsKey(obligation))»
+                if («generatePropositionString(obligation.consequent)») {
+                  contract.obligations.«obligation.name».fulfilled()
+                } else {
+                  contract.obligations.«obligation.name».violated()
+                }
+                «ENDIF»
+              }
               «ENDIF»
             }
           },
@@ -518,7 +527,16 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(obligation.trigger)») {
               contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
               «IF (!survivingObligationAntecedentEvents.containsKey(obligation))»
-              contract.survivingObligations.«obligation.name».trigerredUnconditional()
+              if («generatePropositionString(obligation.antecedent)») {
+                contract.survivingObligations.«obligation.name».trigerredUnconditional()
+                «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
+                if («generatePropositionString(obligation.consequent)») {
+                  contract.survivingObligations.«obligation.name».fulfilled()
+                } else {
+                  contract.survivingObligations.«obligation.name».violated()
+                }
+                «ENDIF»
+              }
               «ENDIF»
             }
           },
@@ -528,7 +546,9 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(power.trigger)») {
               contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
               «IF (!powerAntecedentEvents.containsKey(power))»
-              contract.powers.«power.name».trigerredUnconditional()
+              if («generatePropositionString(power.antecedent)») {
+                contract.powers.«power.name».trigerredUnconditional()
+              }
               «ENDIF»
             }
           },
@@ -537,6 +557,13 @@ class SymboleoGenerator extends AbstractGenerator {
           activateObligation_«obligation.name»(contract) { 
             if (contract.obligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
               contract.obligations.«obligation.name».activated()
+              «IF (!obligationFullfilmentEvents.containsKey(obligation))»
+              if («generatePropositionString(obligation.consequent)») {
+                contract.obligations.«obligation.name».fulfilled()
+              } else {
+                contract.obligations.«obligation.name».violated()
+              }
+              «ENDIF»
             }
           },
         «ENDFOR»
@@ -544,6 +571,13 @@ class SymboleoGenerator extends AbstractGenerator {
           activateSurvivingObligation_«obligation.name»(contract) { 
             if (contract.survivingObligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
               contract.survivingObligations.«obligation.name».activated()
+              «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
+              if («generatePropositionString(obligation.consequent)») {
+                contract.survivingObligations.«obligation.name».fulfilled()
+              } else {
+                contract.survivingObligations.«obligation.name».violated()
+              }
+              «ENDIF»              
             }
           },
         «ENDFOR»
@@ -570,7 +604,7 @@ class SymboleoGenerator extends AbstractGenerator {
         «ENDFOR»
         terminateContract(contract) {
           for (const oblKey of Object.keys(contract.obligations)) {
-            if (contract.obligations[oblKey].isActivated() && !contract.obligations[oblKey].isFulfilled()) {
+            if (contract.obligations[oblKey].isInEffect() || contract.obligations[oblKey].isCreated()) {
               return
             }
           }
@@ -672,7 +706,7 @@ class SymboleoGenerator extends AbstractGenerator {
       PAtomEnum:
         return proposition.enumeration.name + "." + proposition.enumItem.name
       PAtomVariable:
-        return generateDotExpressionString(proposition.variable, 'this')
+        return generateDotExpressionString(proposition.variable, 'contract')
       PAtomPredicateTrueLiteral:
         return "true"
       PAtomPredicateFalseLiteral:
