@@ -97,6 +97,8 @@ import ca.uottawa.csmlab.symboleo.symboleo.SituationExpression
 import ca.uottawa.csmlab.symboleo.symboleo.Timevalue
 import ca.uottawa.csmlab.symboleo.symboleo.TimevalueInt
 import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
 
 //
 /**
@@ -498,6 +500,7 @@ class SymboleoGenerator extends AbstractGenerator {
       import { Power } from «POWER_CLASS_IMPORT_PATH»
       import { Predicates } from «PREDICATES_CLASS_IMPORT_PATH»
       import { Utils } from «UTILS_CLASS_IMPORT_PATH»
+      import { Str } from «UTILS_CLASS_IMPORT_PATH»
       «FOR enumeration : enumerations»
       import { «enumeration.name» } from "./domain/types/«enumeration.name».js"
       «ENDFOR»
@@ -1018,6 +1021,7 @@ class SymboleoGenerator extends AbstractGenerator {
       import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
       import { Power } from «POWER_CLASS_IMPORT_PATH»
       import { Utils } from «UTILS_CLASS_IMPORT_PATH»
+      import { Str } from «UTILS_CLASS_IMPORT_PATH»
       
       export class «model.contractName» extends SymboleoContract {
         constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
@@ -1126,11 +1130,16 @@ class SymboleoGenerator extends AbstractGenerator {
           generateExpressionString(functionCall.arg2, thisString) + ")"
       OneArgMathFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+      ThreeArgStringFunction:
+        return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+          generateExpressionString(functionCall.arg1, thisString) + "," +generateExpressionString(functionCall.arg2, thisString) + ")"
       TwoArgStringFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
           generateExpressionString(functionCall.arg2, thisString) + ")"
       OneArgStringFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+      ThreeArgDateFunction:
+        return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateTimeValueString(functionCall.value)», "«functionCall.timeUnit»")'''
     }
   }
 

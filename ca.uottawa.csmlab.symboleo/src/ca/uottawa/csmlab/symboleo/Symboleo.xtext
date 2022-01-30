@@ -128,20 +128,25 @@ AtomicExpression returns Expression:
 FunctionCall:
 	MathFunction | StringFunction | DateFunction
 ;
-
 MathFunction returns FunctionCall:
-	{TwoArgMathFunction} name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
-	{OneArgMathFunction} name=('Math.abs'|'Math.floor') '(' arg1=Expression ')';
+  {TwoArgMathFunction} name=('Math.pow'|'Math.atan2') '(' arg1=Expression ',' arg2=Expression ')' |
+  {OneArgMathFunction} name=('Math.abs'|'Math.floor'|'Math.acosh'|'Math.acos'
+    |'Math.asinh'|'Math.asin'|'Math.atanh'|'Math.atan'|'Math.cbrt'
+    |'Math.ceil'|'Math.cosh'|'Math.cos'|'Math.exp'|'Math.log10'
+    |'Math.log2'|'Math.log'|'Math.round'|'Math.sign'|'Math.sqrt'
+    |'Math.sinh'|'Math.sin'|'Math.tanh'|'Math.tan'
+  ) '(' arg1=Expression ')';
 
 StringFunction returns FunctionCall:
-	{TwoArgStringFunction} name=('String.concatenate') '(' arg1=Expression ',' arg2=Expression ')' |
-	{OneArgStringFunction} name=('String.lowerCase') '(' arg1=Expression ')';
+  {ThreeArgStringFunction} name=('Str.substring'|'Str.replaceAll'|'Str.replace') '(' arg1=Expression ',' arg2=Expression ',' arg3=Expression ')' |
+  {TwoArgStringFunction} name=('Str.concat') '(' arg1=Expression ',' arg2=Expression ')' |
+  {OneArgStringFunction} name=('Str.toLowerCase'|'Str.toUpperCase'|'Str.trimEnd'|'Str.trimStart'|'Str.trim') '(' arg1=Expression ')';
 	
 DateFunction returns FunctionCall:
-	{OneArgDateFunction} name='Date.function()'		// TODO
+	{ThreeArgDateFunction} name='Date.add' '(' arg1=Expression ',' value=Timevalue ',' timeUnit=TimeUnit  ')' 
 ;
 
-// TODO check that creditor and debtor are valid references
+// TODO check that creditor and debtor are valid references, are type of role
 Obligation:
 	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')';
 
@@ -235,7 +240,7 @@ PointFunction returns PointExpression:
 	{PointFunction} name=PointFunctionName '(' arg=PointExpression ',' value=Timevalue ',' timeUnit=TimeUnit ')';
 
 PointFunctionName:
-	'addTime';
+	'Date.add';
 
 PointAtom returns PointExpression:
 	{PointAtomParameterDotExpression} variable=VariableDotExpression | 
