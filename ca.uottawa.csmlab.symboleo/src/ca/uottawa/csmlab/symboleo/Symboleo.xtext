@@ -190,7 +190,10 @@ PAtomicExpression returns Proposition:
 // TODO check cannotBeAssigned arg type
 PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
-	{PredicateFunctionHappensBefore} name='HappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
+	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
 	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
