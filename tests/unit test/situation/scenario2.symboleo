@@ -1,3 +1,4 @@
+
 Domain domain
 Role1 isA Role;
 Role2 isA Role;

@@ -19,6 +19,6 @@ event1: Event1 with att1 := att_val1;
 event2: Event2 with att2 := att_val2;
 
 Obligations
-Obl1: HappensBefore(event1, att_val1) -> O(role1, role2, true, HappensAfter(event2, att_val2));
+Obl1: ShappensBefore(event1, att_val1) -> O(role1, role2, true, HappensAfter(event2, att_val2));
 
 endContract

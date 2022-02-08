@@ -16,7 +16,7 @@ Contract contr (role1 : Role1, role2 : Role2, party1: String, party2: String, at
 Declarations
 asset1: Asset1 with owner := owner, att1 := att_val1;
 role1: Role1 with party:= party1;
-role2: Role2 with party:= party2;
+role2: Role2 with party:= party1;
 event1: Event1;
 
 Obligations

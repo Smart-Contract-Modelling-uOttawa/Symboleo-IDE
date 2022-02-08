@@ -1,3 +1,7 @@
+/* 
+ * Description: relationship coverage
+ * covers: an obligation relation with consequent situation
+ * */
 Domain domain
 Role1 isA Role;
 Role2 isA Role;

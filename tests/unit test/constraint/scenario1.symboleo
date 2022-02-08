@@ -20,9 +20,9 @@ event1: Event1;
 
 Obligations
 
-Obl1: O(role1, role2, true, HappensBefore(event1, att_val2));
+Obl1: O(role1, role2, true, ShappensBefore(event1, att_val2));
 
 Constraints
-HappensBefore(event1, att_val2);
+ShappensBefore(event1, att_val2);
 
 endContract

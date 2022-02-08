@@ -1,0 +1,17 @@
+Domain domain
+Processor isA Role;
+Controller isA Role;
+Paid isA Event with amount: Number;
+endDomain
+
+Contract dataprocessing(atos: Processor, client : Controller, party1: String, party2: String, amt: Number)
+
+Declarations
+atos : Processor with party := party1;
+client : Controller with party := party2;
+paid : Paid with amount := amt;
+
+Obligations
+opaid : O(client, atos, true, Happens(paid));
+
+endContract

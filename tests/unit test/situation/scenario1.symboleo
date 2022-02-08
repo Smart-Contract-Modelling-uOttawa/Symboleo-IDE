@@ -1,3 +1,8 @@
+/* 
+ * Description: Happening of an event and state transitions of an obligation
+ * Covers situation and relationship with antecedent, consequent and trigger of an obligation
+ * Cover relationship with events
+ * */
 Domain domain
 Role1 isA Role;
 Role2 isA Role;

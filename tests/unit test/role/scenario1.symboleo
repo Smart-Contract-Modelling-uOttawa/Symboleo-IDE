@@ -1,5 +1,6 @@
 /* 
  * Description: assign party and attribute to roles
+ * Cover role concept and relationship with party, contract and legal positions
  * Challenge: party assignment
  * */
 Domain domain

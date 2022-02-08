@@ -1,0 +1,28 @@
+/* 
+ * Description: relationship coverage
+ * covers: a power relation with trigger, antecedent and consequent
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Asset1 isAn Asset with owner: String, att1: Number;
+Event1 isAn Event;
+Event2 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, att_val1 : Number, owner : String)
+
+Declarations
+asset1: Asset1 with owner := owner, att1 := att_val1;
+event1: Event1;
+event2: Event2;
+event3: Event3;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event1));
+Obl2: O(role1, role2, true, Happens(event2));
+
+Powers
+Pw1 : Happens(event3) -> P(role1, role2, Happens(Violated(Obl2)), Suspended(Obl1));
+
+endContract

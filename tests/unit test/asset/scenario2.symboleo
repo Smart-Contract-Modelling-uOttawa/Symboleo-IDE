@@ -1,5 +1,6 @@
 /* 
  * Description: make and instantiate two asset modules
+ * Cover asset concept and relationship with party through 'owner' attribute
  * Challenge: make two assets
  * */
 Domain domain
