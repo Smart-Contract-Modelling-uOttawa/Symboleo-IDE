@@ -99,6 +99,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.TimevalueInt
 import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
+import ca.uottawa.csmlab.symboleo.Helpers
 
 //
 /**
@@ -107,6 +108,10 @@ import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class SymboleoGenerator extends AbstractGenerator {
+  
+  // todo timvalue expression
+  // date literal
+  // point function Date.add
 
   val ASSET_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
   val EVENT_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
@@ -162,7 +167,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
     for (domainType : model.domainTypes) {
       if (domainType instanceof RegularType) {
-        var RegularType base = getBaseType(domainType)
+        var RegularType base = Helpers.getBaseType(domainType)
         if (base !== null) {
           switch base.ontologyType.name {
             case 'Asset': assets.add(domainType as RegularType)
@@ -1139,7 +1144,7 @@ class SymboleoGenerator extends AbstractGenerator {
       OneArgStringFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
       ThreeArgDateFunction:
-        return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateTimeValueString(functionCall.value)», "«functionCall.timeUnit»")'''
+        return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateExpressionString(functionCall.value, thisString)», "«functionCall.timeUnit»")'''
     }
   }
 
@@ -1177,18 +1182,18 @@ class SymboleoGenerator extends AbstractGenerator {
     fsa.generateFile("./" + model.contractName + "/domain/types/" + enumeration.name + ".js", code)
   }
 
-  def RegularType getBaseType(DomainType domainType) {
-    switch (domainType) {
-      RegularType:
-        if (domainType.ontologyType !== null) {
-          return domainType
-        } else {
-          return getBaseType(domainType.regularType)
-        }
-      default:
-        null
-    }
-  }
+//  def RegularType getBaseType(DomainType domainType) {
+//    switch (domainType) {
+//      RegularType:
+//        if (domainType.ontologyType !== null) {
+//          return domainType
+//        } else {
+//          return getBaseType(domainType.regularType)
+//        }
+//      default:
+//        null
+//    }
+//  }
 
   def void generateAsset(IFileSystemAccess2 fsa, Model model, RegularType asset) {
     val isBase = asset.ontologyType !== null
