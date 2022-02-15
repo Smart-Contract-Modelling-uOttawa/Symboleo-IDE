@@ -4,122 +4,655 @@
 package ca.uottawa.csmlab.symboleo.validation;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
-
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.validation.Check;
 import org.eclipse.xtext.validation.CheckType;
 
+import ca.uottawa.csmlab.symboleo.Helpers;
+import ca.uottawa.csmlab.symboleo.ResolveExpressionResult;
+import ca.uottawa.csmlab.symboleo.symboleo.AssignExpression;
+import ca.uottawa.csmlab.symboleo.symboleo.AssignVariable;
+import ca.uottawa.csmlab.symboleo.symboleo.Assignment;
+import ca.uottawa.csmlab.symboleo.symboleo.Attribute;
+import ca.uottawa.csmlab.symboleo.symboleo.AttributeModifier;
 import ca.uottawa.csmlab.symboleo.symboleo.BaseType;
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
 import ca.uottawa.csmlab.symboleo.symboleo.Event;
 import ca.uottawa.csmlab.symboleo.symboleo.Model;
 import ca.uottawa.csmlab.symboleo.symboleo.Obligation;
+import ca.uottawa.csmlab.symboleo.symboleo.OneArgMathFunction;
+import ca.uottawa.csmlab.symboleo.symboleo.OneArgStringFunction;
 import ca.uottawa.csmlab.symboleo.symboleo.OntologyType;
 import ca.uottawa.csmlab.symboleo.symboleo.Parameter;
+import ca.uottawa.csmlab.symboleo.symboleo.ParameterType;
 import ca.uottawa.csmlab.symboleo.symboleo.Power;
+import ca.uottawa.csmlab.symboleo.symboleo.Ref;
 import ca.uottawa.csmlab.symboleo.symboleo.RegularType;
 import ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage;
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction;
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction;
+import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable;
+import ca.uottawa.csmlab.symboleo.symboleo.TwoArgMathFunction;
+import ca.uottawa.csmlab.symboleo.symboleo.TwoArgStringFunction;
 import ca.uottawa.csmlab.symboleo.symboleo.Variable;
+import ca.uottawa.csmlab.symboleo.symboleo.VariableDotExpression;
 import ca.uottawa.csmlab.symboleo.symboleo.VariableEvent;
+import ca.uottawa.csmlab.symboleo.symboleo.VariableRef;
 
 /**
- * This class contains custom validation rules. 
+ * This class contains custom validation rules.
  *
- * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
+ * See
+ * https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 public class SymboleoValidator extends AbstractSymboleoValidator {
-	
-  
-	@Check(CheckType.FAST)
-	public void checkDomainTypesStartsWithCapital(DomainType type) {
-		if (!Character.isUpperCase(type.getName().charAt(0))) {
-			error("Domain types should start with a capital letter", type, SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
-		}
-	}
-  
+
+  List<Variable> variables;
+  List<Parameter> parameters;
+
+  @Check(CheckType.FAST)
+  public void checkDomainTypesStartsWithCapital(DomainType type) {
+    if (!Character.isUpperCase(type.getName().charAt(0))) {
+      error("Domain types should start with a capital letter", type,
+          SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
+    }
+  }
+
   /*
    * Identifiers should be unique
    */
   @Check(CheckType.FAST)
   public void checkIdentifiersAreUnique(Model model) {
+    this.variables = model.getVariables();
+    this.parameters = model.getParameters();
+
     Set<String> identifiers = new HashSet<>();
-    
-    for(DomainType x: model.getDomainTypes()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
+
+    for (DomainType x : model.getDomainTypes()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
       }
       identifiers.add(x.getName());
     }
-    
-    for(Parameter x: model.getParameters()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.PARAMETER__NAME);
+
+    for (Parameter x : model.getParameters()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.PARAMETER__NAME);
       }
       identifiers.add(x.getName());
     }
-    
-    for(Variable x: model.getVariables()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.VARIABLE__NAME);
+
+    for (Variable x : model.getVariables()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.VARIABLE__NAME);
       }
       identifiers.add(x.getName());
     }
-    
-    for(Obligation x: model.getObligations()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.OBLIGATION__NAME);
+
+    for (Obligation x : model.getObligations()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.OBLIGATION__NAME);
       }
       identifiers.add(x.getName());
     }
-    
-    for(Obligation x: model.getSurvivingObligations()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.OBLIGATION__NAME);
+
+    for (Obligation x : model.getSurvivingObligations()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.OBLIGATION__NAME);
       }
       identifiers.add(x.getName());
     }
-    
-    for(Power x: model.getPowers()) {
-      if(identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x, SymboleoPackage.Literals.POWER__NAME);
+
+    for (Power x : model.getPowers()) {
+      if (identifiers.contains(x.getName())) {
+        error("Duplicate identifier " + x.getName(), x,
+            SymboleoPackage.Literals.POWER__NAME);
       }
       identifiers.add(x.getName());
     }
   }
-  
-//  @Check(CheckType.FAST)
-//  public void checkVariableEventsType(VariableEvent event) {    
-//    if (event.getVariable() == null) {
-//      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
-//      return;
-//    }
-//    
-//    RegularType currentType = event.getVariable().getType();
-//    while(true) {
-//      if(currentType.getRegularType() == null) {
-//        break;
-//      }
-//      currentType = currentType.getRegularType(); 
-//    }
-//    
-//    if (!currentType.getOntologyType().getName().equalsIgnoreCase("event")) {
-//      error("only variable of type event is allowed", event, SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
-//    }
-//  }
-  
-//  @Check(CheckType.FAST)
-//  public void checkNumericExpressionParameterType(NumericExpressionParameter np) {
-//    if (np.getValue().getType().getBaseType() == null || !np.getValue().getType().getBaseType().getName().equalsIgnoreCase("number")) {
-//      error("Should be of type number", np, SymboleoPackage.Literals.NUMERIC_EXPRESSION_PARAMETER__VALUE);
-//    }
-//  }
-//
-//  @Check(CheckType.FAST)
-//  public void checkStringExpressionParameterType(StringExpressionParameter np) {
-//    if (np.getParameter().getType().getBaseType() == null || !np.getParameter().getType().getBaseType().getName().equalsIgnoreCase("string")) {
-//      error("Should be of type string", np, SymboleoPackage.Literals.STRING_EXPRESSION_PARAMETER__PARAMETER);
-//    }
-//  }
-	
+
+  /*
+   * Check that model properties have unique names
+   */
+  @Check(CheckType.FAST)
+  public void checkModelAttrbiutesAreUnique(DomainType type) {
+    if (type instanceof RegularType) {
+      // set of property names
+      Set<String> identifiers = new HashSet<>();
+      // iterate over all properties of the model
+      for (Attribute atr : Helpers
+          .getAttributesOfRegularType((RegularType) type)) {
+        if (identifiers.contains(atr.getName())) {
+          error(
+              "Duplicate attrbiute name '" + atr.getName() + "' in "
+                  + type.getName(),
+              atr, SymboleoPackage.Literals.ATTRIBUTE__NAME);
+        }
+        identifiers.add(atr.getName());
+      }
+    }
+  }
+
+  /*
+   * Check that Env is only used for Event types
+   */
+  @Check(CheckType.FAST)
+  public void checkEnvUsageIsValid(DomainType type) {
+    if (type instanceof RegularType) {
+      // check that base type is Event
+      boolean isEvent = Helpers.getBaseType(type).getOntologyType().getName()
+          .equalsIgnoreCase("Event");
+      for (Attribute atr : ((RegularType) type).getAttributes()) {
+        if (atr.getAttributeModifier() != null) {
+          AttributeModifier mod = atr.getAttributeModifier();
+          // if is not a type of Event and Env is used then show error
+          if (mod.getName().equalsIgnoreCase("Env") && !isEvent) {
+            error(
+                "Env can only be used inside Event types: '" + atr.getName()
+                    + "' in " + type.getName(),
+                atr, SymboleoPackage.Literals.ATTRIBUTE__NAME);
+          }
+        }
+      }
+    }
+  }
+
+  /*
+   * check that variable initiations are valid
+   */
+  @Check(CheckType.FAST)
+  public void checkInitiationsAreValid(Variable var) {
+    RegularType type = var.getType();
+
+    // get list of assignments
+    List<Assignment> assignments = var.getAttributes();
+    for (Attribute atr : Helpers.getAttributesOfRegularType((RegularType) type)) {
+      // find that the attribute is assigned
+      Optional<Assignment> res = assignments.stream()
+          .filter(a -> a.getName().equals(atr.getName())).findFirst();
+      boolean isInitiated = res.isPresent();
+      if (atr.getAttributeModifier() != null) {
+        AttributeModifier mod = atr.getAttributeModifier();
+        // Env values shall not be set
+        if (mod.getName().equalsIgnoreCase("Env") && isInitiated) {
+          error(
+              "Env attrbiute '" + res.get().getName() + "' in " + type.getName()
+                  + " shall not be initiated.",
+              res.get(), SymboleoPackage.Literals.ASSIGNMENT__NAME);
+        }
+      } else if (!isInitiated) {
+        // all other attributes should be initiated
+        error(
+            "Attrbiute '" + atr.getName() + "' is not initiated in variable '"
+                + var.getName() + "'. ",
+            atr, SymboleoPackage.Literals.ATTRIBUTE__NAME);
+      }
+    }
+  }
+
+  /*
+   * check that assignments are valid
+   */
+  @Check(CheckType.FAST)
+  public void checkAssignmentsName(Variable var) {
+    RegularType type = var.getType();
+
+    // get list of type attrbiutes
+    List<Attribute> attributes = Helpers
+        .getAttributesOfRegularType((RegularType) type);
+    for (Assignment assignment : var.getAttributes()) {
+      // find that the assigmnet name is in the model
+      Optional<Attribute> res = attributes.stream()
+          .filter(atr -> atr.getName().equals(assignment.getName())).findFirst();
+      if (res.isEmpty()) {
+        error(
+            "Attribute '" + assignment.getName() + "' in " + var.getName()
+                + " is not defined in model '" + type.getName() + "'.",
+            assignment, SymboleoPackage.Literals.ASSIGNMENT__NAME);
+      }
+    }
+  }
+
+  /*
+   * check type of creditor and debtor
+   */
+  @Check(CheckType.FAST)
+  public void checkCreditorAndDebtor(Model model) {
+    // loop over powers
+    for (Power power : model.getPowers()) {
+      // check debtor type
+      EObject debtorType = Helpers.getDotExpressionType(power.getDebtor(),
+          model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (debtorType instanceof ParameterType
+          && ((ParameterType) debtorType).getDomainType() != null) {
+        debtorType = ((ParameterType) debtorType).getDomainType();
+      }
+      if (debtorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) debtorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error("Debtor value in '" + power.getName() + "' is not type of Role.'",
+              power, SymboleoPackage.Literals.POWER__DEBTOR);
+        }
+      } else {
+        error("Debtor value in '" + power.getName() + "' is not type of Role.'",
+            power, SymboleoPackage.Literals.POWER__DEBTOR);
+      }
+
+      // check creditor type
+      EObject creditorType = Helpers.getDotExpressionType(power.getCreditor(),
+          model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (creditorType instanceof ParameterType
+          && ((ParameterType) creditorType).getDomainType() != null) {
+        creditorType = ((ParameterType) creditorType).getDomainType();
+      }
+      if (creditorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) creditorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error(
+              "Creditor value in '" + power.getName() + "' is not type of Role.'",
+              power, SymboleoPackage.Literals.POWER__CREDITOR);
+        }
+      } else {
+        error("Creditor value in '" + power.getName() + "' is not type of Role.'",
+            power, SymboleoPackage.Literals.POWER__CREDITOR);
+      }
+    }
+
+    // loop over obligations
+    for (Obligation obligation : model.getObligations()) {
+      // check debtor type
+      EObject debtorType = Helpers.getDotExpressionType(obligation.getDebtor(),
+          model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (debtorType instanceof ParameterType
+          && ((ParameterType) debtorType).getDomainType() != null) {
+        debtorType = ((ParameterType) debtorType).getDomainType();
+      }
+      if (debtorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) debtorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error(
+              "Debtor value in '" + obligation.getName()
+                  + "' is not type of Role.'",
+              obligation, SymboleoPackage.Literals.OBLIGATION__DEBTOR);
+        }
+      } else {
+        error(
+            "Debtor value in '" + obligation.getName()
+                + "' is not type of Role.'",
+            obligation, SymboleoPackage.Literals.OBLIGATION__DEBTOR);
+      }
+      // check creditor type
+      EObject creditorType = Helpers.getDotExpressionType(
+          obligation.getCreditor(), model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (creditorType instanceof ParameterType
+          && ((ParameterType) creditorType).getDomainType() != null) {
+        creditorType = ((ParameterType) creditorType).getDomainType();
+      }
+      if (creditorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) creditorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error(
+              "Creditor value in '" + obligation.getName()
+                  + "' is not type of Role.'",
+              obligation, SymboleoPackage.Literals.OBLIGATION__CREDITOR);
+        }
+      } else {
+        error(
+            "Creditor value in '" + obligation.getName()
+                + "' is not type of Role.'",
+            obligation, SymboleoPackage.Literals.OBLIGATION__CREDITOR);
+      }
+    }
+
+    // loop over surviving obligations
+    for (Obligation obligation : model.getSurvivingObligations()) {
+      // check debtor type
+      EObject debtorType = Helpers.getDotExpressionType(obligation.getDebtor(),
+          model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (debtorType instanceof ParameterType
+          && ((ParameterType) debtorType).getDomainType() != null) {
+        debtorType = ((ParameterType) debtorType).getDomainType();
+      }
+      if (debtorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) debtorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error(
+              "Debtor value in '" + obligation.getName()
+                  + "' is not type of Role.'",
+              obligation, SymboleoPackage.Literals.OBLIGATION__DEBTOR);
+        }
+      } else {
+        error(
+            "Debtor value in '" + obligation.getName()
+                + "' is not type of Role.'",
+            obligation, SymboleoPackage.Literals.OBLIGATION__DEBTOR);
+      }
+      // check creditor type
+      EObject creditorType = Helpers.getDotExpressionType(
+          obligation.getCreditor(), model.getVariables(), model.getParameters());
+      // get the parameter type if it is a parameter
+      if (creditorType instanceof ParameterType
+          && ((ParameterType) creditorType).getDomainType() != null) {
+        creditorType = ((ParameterType) creditorType).getDomainType();
+      }
+      if (creditorType instanceof DomainType) {
+        // error if it is not a Role
+        RegularType base = Helpers.getBaseType((DomainType) creditorType);
+        if (base == null
+            || base != null && !base.getOntologyType().getName().equals("Role")) {
+          error(
+              "Creditor value in '" + obligation.getName()
+                  + "' is not type of Role.'",
+              obligation, SymboleoPackage.Literals.OBLIGATION__CREDITOR);
+        }
+      } else {
+        error(
+            "Creditor value in '" + obligation.getName()
+                + "' is not type of Role.'",
+            obligation, SymboleoPackage.Literals.OBLIGATION__CREDITOR);
+      }
+    }
+
+  }
+
+  /*
+   * check assignment types
+   */
+  @Check(CheckType.FAST)
+  public void checkExpressionVariables(VariableRef var) {
+    // each VariableRef in VariableDotExpression shoudl be defined
+    EObject typeObject = Helpers.getDotExpressionType(var, this.variables,
+        this.parameters);
+    if (typeObject == null) {
+      error("Variable '" + var.getVariable() + " is not defined.", var,
+          SymboleoPackage.Literals.VARIABLE_REF__VARIABLE);
+    }
+  }
+
+  /*
+   * check assignment types
+   */
+  @Check(CheckType.NORMAL)
+  public void checkExpressionTypes(Model model) {
+    // run the check for every variable
+    for (Variable var : model.getVariables()) {
+      RegularType modelType = var.getType();
+      // get all attrbiutes of the type
+      List<Attribute> attributes = Helpers
+          .getAttributesOfRegularType((RegularType) modelType);
+      for (Assignment asg : var.getAttributes()) {
+        // find the type in the model
+        Optional<Attribute> res = attributes.stream()
+            .filter(atr -> atr.getName().equals(asg.getName())).findFirst();
+        if (!res.isEmpty()) {
+          Attribute atr = res.get();
+          String atrType = null;
+
+          // get attribute type
+          if (atr.getDomainType() != null) {
+            atrType = Helpers.handleDomainType(atr.getDomainType()).type;
+          } else if (atr.getBaseType() != null) {
+            atrType = atr.getBaseType().getName();
+          }
+
+          if (asg instanceof AssignExpression) {
+            // resolve epxression type
+            ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+                ((AssignExpression) asg).getValue(), model.getVariables(),
+                model.getParameters());
+            if (typeRes.error != null) {
+              // if there is an error in resolving the type, show the error
+              error(typeRes.message, typeRes.error, typeRes.ref);
+            }
+            if (!typeRes.type.equals(atrType)) {
+              // if type does not match
+              error(
+                  "Type of '" + asg.getName() + "' in " + var.getName() + " is "
+                      + atrType + ", it does not match " + typeRes.type,
+                  asg, SymboleoPackage.Literals.ASSIGNMENT__NAME);
+            }
+          } else if (asg instanceof AssignVariable) {
+            // resolve VariableDotExpression type
+            ResolveExpressionResult typeRes = Helpers.getVariableExpressionType(
+                ((AssignVariable) asg).getValue(), model.getVariables(),
+                model.getParameters());
+            if (!typeRes.type.equals(atrType)) {
+              error(
+                  "Type of '" + asg.getName() + "' in " + var.getName()
+                      + " does not match",
+                  asg, SymboleoPackage.Literals.ASSIGNMENT__NAME);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkMathFunctionArgsType(OneArgMathFunction function) {
+    // resolve type of argument
+    ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+        function.getArg1(), this.variables, this.parameters);
+    // show error if not a number
+    if (typeRes.error != null) {
+      error(typeRes.message, typeRes.error, typeRes.ref);
+    }
+    if (!typeRes.type.equals("Number")) {
+      error("First argument of '" + function.getName() + "' should be a Number.",
+          function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkMathFunctionArgsType2(TwoArgMathFunction function) {
+    // resolve type of argument
+    ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+        function.getArg1(), this.variables, this.parameters);
+    ResolveExpressionResult typeRes2 = Helpers.resolveExpressionType(
+        function.getArg2(), this.variables, this.parameters);
+    // show error if not a number
+    if (typeRes.error != null) {
+      error(typeRes.message, typeRes.error, typeRes.ref);
+    }
+    if (typeRes2.error != null) {
+      error(typeRes2.message, typeRes2.error, typeRes2.ref);
+    }
+    if (!typeRes.type.equals("Number")) {
+      error("First argument of '" + function.getName() + "' should be a Number.",
+          function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+    }
+    if (!typeRes2.type.equals("Number")) {
+      error("Second argument of '" + function.getName() + "' should be a Number.",
+          function, SymboleoPackage.Literals.TWO_ARG_MATH_FUNCTION__ARG2);
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkStringFunctionArgsType(OneArgStringFunction function) {
+    // resolve type of argument
+    ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+        function.getArg1(), this.variables, this.parameters);
+    // show error if not a string
+    if (typeRes.error != null) {
+      error(typeRes.message, typeRes.error, typeRes.ref);
+    }
+    if (!typeRes.type.equals("String")) {
+      error("First argument of '" + function.getName() + "' should be a Number.",
+          function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkStringFunctionArgsType2(TwoArgStringFunction function) {
+    // resolve type of argument
+    ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+        function.getArg1(), this.variables, this.parameters);
+    ResolveExpressionResult typeRes2 = Helpers.resolveExpressionType(
+        function.getArg2(), this.variables, this.parameters);
+    // show error if not a string
+    if (typeRes.error != null) {
+      error(typeRes.message, typeRes.error, typeRes.ref);
+    }
+    if (typeRes2.error != null) {
+      error(typeRes2.message, typeRes2.error, typeRes2.ref);
+    }
+    if (!typeRes.type.equals("String")) {
+      error("First argument of '" + function.getName() + "' should be a String.",
+          function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+    }
+    if (!typeRes2.type.equals("String")) {
+      error("Second argument of '" + function.getName() + "' should be a String.",
+          function, SymboleoPackage.Literals.TWO_ARG_STRING_FUNCTION__ARG2);
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkStringFunctionArgsType3(ThreeArgStringFunction function) {
+    // resolve type of argument
+    ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+        function.getArg1(), this.variables, this.parameters);
+    ResolveExpressionResult typeRes2 = Helpers.resolveExpressionType(
+        function.getArg2(), this.variables, this.parameters);
+    ResolveExpressionResult typeRes3 = Helpers.resolveExpressionType(
+        function.getArg3(), this.variables, this.parameters);
+
+    if (typeRes2.error != null) {
+      error(typeRes2.message, typeRes2.error, typeRes2.ref);
+    }
+    if (typeRes3.error != null) {
+      error(typeRes3.message, typeRes3.error, typeRes3.ref);
+    }
+    // show error if not a string
+    if (typeRes.error != null) {
+      error(typeRes.message, typeRes.error, typeRes.ref);
+    }
+    if (!typeRes.type.equals("String")) {
+      error("First argument of '" + function.getName() + "' should be a String.",
+          function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+    }
+
+    if (function.getName().equals("String.replace")
+        || function.getName().equals("String.replaceAll")) {
+      if (!typeRes2.type.equals("String")) {
+        error(
+            "Second argument of '" + function.getName() + "' should be a String.",
+            function, SymboleoPackage.Literals.THREE_ARG_STRING_FUNCTION__ARG2);
+      }
+      if (!typeRes3.type.equals("String")) {
+        error(
+            "Third argument of '" + function.getName() + "' should be a String.",
+            function, SymboleoPackage.Literals.THREE_ARG_STRING_FUNCTION__ARG3);
+      }
+    } else if (function.getName().equals("String.substring")) {
+      // second and third args of substring are number
+      if (!typeRes2.type.equals("Number")) {
+        error(
+            "Second argument of '" + function.getName() + "' should be a Number.",
+            function, SymboleoPackage.Literals.THREE_ARG_STRING_FUNCTION__ARG2);
+      }
+      if (!typeRes3.type.equals("Number")) {
+        error(
+            "Third argument of '" + function.getName() + "' should be a Number.",
+            function, SymboleoPackage.Literals.THREE_ARG_STRING_FUNCTION__ARG3);
+      }
+    }
+  }
+
+  /*
+   * check type of internal functions
+   */
+  @Check(CheckType.FAST)
+  public void checkStringFunctionArgsType3(ThreeArgDateFunction function) {
+    if (function.getName().equals("Date.add")) {
+      // resolve type of argument
+      ResolveExpressionResult typeRes = Helpers.resolveExpressionType(
+          function.getArg1(), this.variables, this.parameters);
+      // show error if not a string
+      if (typeRes.error != null) {
+        error(typeRes.message, typeRes.error, typeRes.ref);
+      }
+      if (!typeRes.type.equals("Date")) {
+        error("First argument of '" + function.getName() + "' should be a Date.",
+            function, SymboleoPackage.Literals.FUNCTION_CALL__ARG1);
+      }
+
+      // resolve second argument if an expression is used
+      ResolveExpressionResult typeRes2 = Helpers.resolveExpressionType(
+          function.getValue(), this.variables, this.parameters);
+      if (typeRes2.error != null) {
+        error(typeRes2.message, typeRes2.error, typeRes2.ref);
+      }
+      if (!typeRes2.type.equals("Number")) {
+        error(
+            "Second argument of '" + function.getName() + "' should be a Number.",
+            function, SymboleoPackage.Literals.THREE_ARG_DATE_FUNCTION__VALUE);
+      }
+
+    }
+  }
+
+  /*
+   * only variables of type Event shall be used inside VariableEvent
+   */
+  @Check(CheckType.FAST)
+  public void checkVariableEventsType(VariableEvent event) {
+    // get type of VariableDotExpression
+    EObject typeRes = Helpers.getDotExpressionType(event.getVariable(),
+        this.variables, this.parameters);
+    if (!(typeRes instanceof RegularType)) {
+      error("Only variable of type Event is allowed", event,
+          SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
+      return;
+    }
+    // get the parent type
+    RegularType dt = (RegularType) typeRes;
+    RegularType type = Helpers.getBaseType(dt);
+    if (type == null) {
+      error("Only variable of type Event is allowed", event,
+          SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
+    } else if (!type.getOntologyType().getName().equalsIgnoreCase("event")) {
+      error("Only variable of type Event is allowed", event,
+          SymboleoPackage.Literals.VARIABLE_EVENT__VARIABLE);
+    }
+  }
 }

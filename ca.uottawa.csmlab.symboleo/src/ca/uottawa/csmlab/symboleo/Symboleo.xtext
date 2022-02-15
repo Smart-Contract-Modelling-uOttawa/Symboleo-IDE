@@ -62,7 +62,6 @@ Variable:
 	name=ID ':' type=[RegularType] ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
 
 // TODO name should be from the attributes of the used type
-// TODO assign from parameters and variables
 // TODO check assigned type is correct
 // TODO should be declared before use
 Assignment:
@@ -70,8 +69,7 @@ Assignment:
 	AssignmentB;
 
 VariableDotExpression returns Ref:
-	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*
-	;
+	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
 
 VariableRef returns Ref:
 	{VariableRef} variable=ID;
@@ -82,12 +80,6 @@ AssignmentB returns AssignExpression:
 Double returns ecore::EDouble:
 	INT '.' INT;
 
-// TODO time expressions
-// TODO dot expressions
-// TODO check forward reference
-// TODO declared variables
-// TODO no type cast
-// TODO enum values
 Expression: Or;
 
 Or returns Expression:
@@ -128,20 +120,22 @@ AtomicExpression returns Expression:
 FunctionCall:
 	MathFunction | StringFunction | DateFunction
 ;
-
 MathFunction returns FunctionCall:
-	{TwoArgMathFunction} name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
-	{OneArgMathFunction} name=('Math.abs'|'Math.floor') '(' arg1=Expression ')';
+  {TwoArgMathFunction} name=('Math.pow') '(' arg1=Expression ',' arg2=Expression ')' |
+  {OneArgMathFunction} name=('Math.abs'|'Math.floor'|'Math.cbrt'
+    |'Math.ceil'|'Math.exp'|'Math.sign'|'Math.sqrt'
+  ) '(' arg1=Expression ')';
 
 StringFunction returns FunctionCall:
-	{TwoArgStringFunction} name=('String.concatenate') '(' arg1=Expression ',' arg2=Expression ')' |
-	{OneArgStringFunction} name=('String.lowerCase') '(' arg1=Expression ')';
+  {ThreeArgStringFunction} name=('String.substring'|'String.replaceAll') '(' arg1=Expression ',' arg2=Expression ',' arg3=Expression ')' |
+  {TwoArgStringFunction} name=('String.concat') '(' arg1=Expression ',' arg2=Expression ')' |
+  {OneArgStringFunction} name=('String.toLowerCase'|'String.toUpperCase'|'String.trimEnd'|'String.trimStart'|'String.trim') '(' arg1=Expression ')';
 	
 DateFunction returns FunctionCall:
-	{OneArgDateFunction} name='Date.function()'		// TODO
+	{ThreeArgDateFunction} name='Date.add' '(' arg1=Expression ',' value=Expression ',' timeUnit=TimeUnit  ')' 
 ;
 
-// TODO check that creditor and debtor are valid references
+// TODO check that creditor and debtor are valid references, are type of role
 Obligation:
 	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')';
 
@@ -178,7 +172,7 @@ PAtomicExpression returns Proposition:
 	{PAtomRecursive} '(' inner=Proposition ')' |
 	{NegatedPAtom} 'not' negated=PAtomicExpression | // TODO does not work with happens* functions
 	{PAtomPredicate} predicateFunction=PredicateFunction |
-    {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
+  {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{PAtomVariable} variable=VariableDotExpression |
 	{PAtomPredicateTrueLiteral} value='true' |
 	{PAtomPredicateFalseLiteral} value='false' |
@@ -191,9 +185,7 @@ PAtomicExpression returns Proposition:
 PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
 	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
@@ -241,7 +233,7 @@ PointFunction returns PointExpression:
 	{PointFunction} name=PointFunctionName '(' arg=PointExpression ',' value=Timevalue ',' timeUnit=TimeUnit ')';
 
 PointFunctionName:
-	'addTime';
+	'Date.add';
 
 PointAtom returns PointExpression:
 	{PointAtomParameterDotExpression} variable=VariableDotExpression | 
@@ -252,11 +244,11 @@ PointAtom returns PointExpression:
 
 Timevalue:
 	{TimevalueInt} value=INT |
-	{TimevalueVariable} variable=VariableDotExpression // TODO check type of variable
+	{TimevalueVariable} variable=VariableDotExpression
 ;
 
 TimeUnit:
-	'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'years';
+	'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
 
 Interval:
 	intervalExpression=IntervalExpression;
@@ -287,6 +279,3 @@ ContractState:
 
 ContractStateName:
 	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
-	
-
-// TODO dot navigation for ontology models

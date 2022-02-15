@@ -97,6 +97,9 @@ import ca.uottawa.csmlab.symboleo.symboleo.SituationExpression
 import ca.uottawa.csmlab.symboleo.symboleo.Timevalue
 import ca.uottawa.csmlab.symboleo.symboleo.TimevalueInt
 import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction
+import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
+import ca.uottawa.csmlab.symboleo.Helpers
 
 //
 /**
@@ -105,6 +108,10 @@ import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class SymboleoGenerator extends AbstractGenerator {
+  
+  // todo timvalue expression
+  // date literal
+  // point function Date.add
 
   val ASSET_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
   val EVENT_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
@@ -151,6 +158,7 @@ class SymboleoGenerator extends AbstractGenerator {
     compileContract(fsa, model)
     compileTransactionFile(fsa, model)
     compileEventsFile(fsa, model)
+    compileSerializerFile(fsa, model)
     generateNPMFile(fsa, model)
   }
 
@@ -159,7 +167,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
     for (domainType : model.domainTypes) {
       if (domainType instanceof RegularType) {
-        var RegularType base = getBaseType(domainType)
+        var RegularType base = Helpers.getBaseType(domainType)
         if (base !== null) {
           switch base.ontologyType.name {
             case 'Asset': assets.add(domainType as RegularType)
@@ -357,7 +365,7 @@ class SymboleoGenerator extends AbstractGenerator {
     // contract termination
     for (obligation : allObligations) {
       arrays.
-        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
+        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
     }
 
     return '''
@@ -489,7 +497,6 @@ class SymboleoGenerator extends AbstractGenerator {
     fsa.generateFile("./" + model.contractName + "/" + "serializer.js", code)
   }
 
-  // TODO fix terminate contract condition
   def void compileEventsFile(IFileSystemAccess2 fsa, Model model) {
 
     val code = '''
@@ -498,6 +505,7 @@ class SymboleoGenerator extends AbstractGenerator {
       import { Power } from «POWER_CLASS_IMPORT_PATH»
       import { Predicates } from «PREDICATES_CLASS_IMPORT_PATH»
       import { Utils } from «UTILS_CLASS_IMPORT_PATH»
+      import { Str } from «UTILS_CLASS_IMPORT_PATH»
       «FOR enumeration : enumerations»
       import { «enumeration.name» } from "./domain/types/«enumeration.name».js"
       «ENDFOR»
@@ -508,7 +516,16 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(obligation.trigger)») {
               contract.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
               «IF (!obligationAntecedentEvents.containsKey(obligation))»
-              contract.obligations.«obligation.name».trigerredUnconditional()
+              if («generatePropositionString(obligation.antecedent)») {
+                contract.obligations.«obligation.name».trigerredUnconditional()
+                «IF (!obligationFullfilmentEvents.containsKey(obligation))»
+                if («generatePropositionString(obligation.consequent)») {
+                  contract.obligations.«obligation.name».fulfilled()
+                } else {
+                  contract.obligations.«obligation.name».violated()
+                }
+                «ENDIF»
+              }
               «ENDIF»
             }
           },
@@ -518,7 +535,16 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(obligation.trigger)») {
               contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
               «IF (!survivingObligationAntecedentEvents.containsKey(obligation))»
-              contract.survivingObligations.«obligation.name».trigerredUnconditional()
+              if («generatePropositionString(obligation.antecedent)») {
+                contract.survivingObligations.«obligation.name».trigerredUnconditional()
+                «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
+                if («generatePropositionString(obligation.consequent)») {
+                  contract.survivingObligations.«obligation.name».fulfilled()
+                } else {
+                  contract.survivingObligations.«obligation.name».violated()
+                }
+                «ENDIF»
+              }
               «ENDIF»
             }
           },
@@ -528,7 +554,9 @@ class SymboleoGenerator extends AbstractGenerator {
             if («generatePropositionString(power.trigger)») {
               contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
               «IF (!powerAntecedentEvents.containsKey(power))»
-              contract.powers.«power.name».trigerredUnconditional()
+              if («generatePropositionString(power.antecedent)») {
+                contract.powers.«power.name».trigerredUnconditional()
+              }
               «ENDIF»
             }
           },
@@ -537,6 +565,13 @@ class SymboleoGenerator extends AbstractGenerator {
           activateObligation_«obligation.name»(contract) { 
             if (contract.obligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
               contract.obligations.«obligation.name».activated()
+              «IF (!obligationFullfilmentEvents.containsKey(obligation))»
+              if («generatePropositionString(obligation.consequent)») {
+                contract.obligations.«obligation.name».fulfilled()
+              } else {
+                contract.obligations.«obligation.name».violated()
+              }
+              «ENDIF»
             }
           },
         «ENDFOR»
@@ -544,6 +579,13 @@ class SymboleoGenerator extends AbstractGenerator {
           activateSurvivingObligation_«obligation.name»(contract) { 
             if (contract.survivingObligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
               contract.survivingObligations.«obligation.name».activated()
+              «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
+              if («generatePropositionString(obligation.consequent)») {
+                contract.survivingObligations.«obligation.name».fulfilled()
+              } else {
+                contract.survivingObligations.«obligation.name».violated()
+              }
+              «ENDIF»              
             }
           },
         «ENDFOR»
@@ -570,7 +612,7 @@ class SymboleoGenerator extends AbstractGenerator {
         «ENDFOR»
         terminateContract(contract) {
           for (const oblKey of Object.keys(contract.obligations)) {
-            if (contract.obligations[oblKey].isActivated() && !contract.obligations[oblKey].isFulfilled()) {
+            if (contract.obligations[oblKey].isInEffect() || contract.obligations[oblKey].isCreated()) {
               return
             }
           }
@@ -672,7 +714,7 @@ class SymboleoGenerator extends AbstractGenerator {
       PAtomEnum:
         return proposition.enumeration.name + "." + proposition.enumItem.name
       PAtomVariable:
-        return generateDotExpressionString(proposition.variable, 'this')
+        return generateDotExpressionString(proposition.variable, 'contract')
       PAtomPredicateTrueLiteral:
         return "true"
       PAtomPredicateFalseLiteral:
@@ -984,6 +1026,7 @@ class SymboleoGenerator extends AbstractGenerator {
       import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
       import { Power } from «POWER_CLASS_IMPORT_PATH»
       import { Utils } from «UTILS_CLASS_IMPORT_PATH»
+      import { Str } from «UTILS_CLASS_IMPORT_PATH»
       
       export class «model.contractName» extends SymboleoContract {
         constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
@@ -1092,11 +1135,16 @@ class SymboleoGenerator extends AbstractGenerator {
           generateExpressionString(functionCall.arg2, thisString) + ")"
       OneArgMathFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+      ThreeArgStringFunction:
+        return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+          generateExpressionString(functionCall.arg1, thisString) + "," +generateExpressionString(functionCall.arg2, thisString) + ")"
       TwoArgStringFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
           generateExpressionString(functionCall.arg2, thisString) + ")"
       OneArgStringFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+      ThreeArgDateFunction:
+        return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateExpressionString(functionCall.value, thisString)», "«functionCall.timeUnit»")'''
     }
   }
 
@@ -1134,18 +1182,18 @@ class SymboleoGenerator extends AbstractGenerator {
     fsa.generateFile("./" + model.contractName + "/domain/types/" + enumeration.name + ".js", code)
   }
 
-  def RegularType getBaseType(DomainType domainType) {
-    switch (domainType) {
-      RegularType:
-        if (domainType.ontologyType !== null) {
-          return domainType
-        } else {
-          return getBaseType(domainType.regularType)
-        }
-      default:
-        null
-    }
-  }
+//  def RegularType getBaseType(DomainType domainType) {
+//    switch (domainType) {
+//      RegularType:
+//        if (domainType.ontologyType !== null) {
+//          return domainType
+//        } else {
+//          return getBaseType(domainType.regularType)
+//        }
+//      default:
+//        null
+//    }
+//  }
 
   def void generateAsset(IFileSystemAccess2 fsa, Model model, RegularType asset) {
     val isBase = asset.ontologyType !== null
