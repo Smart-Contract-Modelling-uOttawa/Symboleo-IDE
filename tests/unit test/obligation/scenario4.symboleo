@@ -1,0 +1,23 @@
+/* 
+ * Description: relationship coverage
+ * covers: an obligation relation with trigger
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event;
+Event2 isAn Event;
+Event3 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, dueDate : Date)
+
+Declarations 
+event1: Event1;
+event2: Event2;
+event3: Event3;
+
+Obligations
+Obl1 : Happens(event3) -> O(role1, role2, Happens(event2), ShappensBefore(event1, dueDate));
+
+endContract

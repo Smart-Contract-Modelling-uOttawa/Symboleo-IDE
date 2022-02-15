@@ -1,0 +1,18 @@
+
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event;
+Event2 isAn Event ;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2)
+
+Declarations
+event1: Event1;
+event2: Event2;
+
+Obligations
+Obl1: O(role1, role2, Happens(event1), Happens(event1) and Happens(event2));
+
+endContract

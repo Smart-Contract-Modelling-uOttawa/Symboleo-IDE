@@ -1,0 +1,25 @@
+/* 
+ * Description: assign party and attribute to roles
+ * Cover role concept and relationship with party, contract and legal positions
+ * Challenge: party assignment
+ * */
+Domain domain
+Role1 isA Role with att1: String;
+Role2 isA Role with att2: Number;
+Asset1 isAn Asset with owner: String;
+Event1 isAn Event;
+endDomain
+
+// *parties as input parameters
+Contract contr (role1 : Role1, role2 : Role2, party1: String, party2: String, att_val1 : String, att_val2 : Number, owner : String)
+
+Declarations
+asset1: Asset1 with owner := owner;
+role1: Role1 with party:= party1, att1 := att_val1;
+role2: Role2 with party:= party2, att2 := att_val2;
+event1: Event1;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event1));
+
+endContract

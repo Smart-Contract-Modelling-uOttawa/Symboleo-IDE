@@ -1,0 +1,29 @@
+/* 
+ * Description: order events happens(event1, event2).
+ * Challenge: implicit constraint
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event;
+Event2 isAn Event;
+Event3 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, party1: String, party2: String, att_val1 : Number, att_val2 : Number, owner : String)
+
+Declarations
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+event1: Event1;
+event2: Event2;
+event3: Event3;
+
+Preconditions
+not IsEqual(party1, party2);
+
+Obligations
+Obl1: O(role1, role2, true, ShappensBefore(event1, event2) and HappensAfter(event1, event2));
+Obl2: O(role2, role1, true, HappensAfter(event2, event3) and att_val1 > 10);
+
+endContract

@@ -1,0 +1,69 @@
+Domain DataProcessingD
+
+Processor isA Role;      
+Controller isA Role;
+
+OriginDataType isAn Enumeration(DataSubject, Customer, ExectingProcessing, DataBroker, OnlinePlatform, ExternalSource, ThirdParty, Other);
+RegionData isAn Enumeration(EU, APAC, BTN, MEA, MAD, SAM);
+CatSubjects isAn Enumeration(Employees, Customers, Providers, EndUsers, Members, Visitors, Other) ;
+CateProcessingAct isAn Enumeration(Collection, Recording, Organization, Structuring, Storage, Adaption, Retrieval, RemoteAccess, Consultation,
+	                             Use, Disclosure, Others);
+
+Instruction isA Asset with originData: OriginDataType, regionData : RegionData, categoriesDataSubjects: CatSubjects,
+                            categoriesProcessingActivity: CateProcessingAct, personalData: Boolean, biometricData:Boolean ;
+
+ProccessedData isA Event with Env instruction: Instruction, data:Data;
+DataType isAn Enumeration(Personal, Biometric); 
+Data isA Asset with type:DataType;                          	                             	                             	                                            	                             
+DpEvent isA Event with Env instruction: Instruction;
+DeliveredRecord isA Event with data:Data;
+RequestReco isA Event with data:Data;
+RecordedProcess isA Event with  data:Data;
+Paid isA Event with Env amount: Number;
+
+endDomain
+
+Contract DataProcessingC (Atos: Processor, Client : Controller, originD: OriginDataType, regionD: RegionData, 
+	categoriesD: CatSubjects, categoriesP: CateProcessingAct, isPersonalD: Boolean, isBiometricD: Boolean)
+
+Declarations 
+inst : Instruction with originData:= originD,  regionData:= regionD, categoriesDataSubjects:=categoriesD, categoriesProcessingActivity:=categoriesP, personalData:=isPersonalD, biometricData:=isBiometricD;
+processedData : ProccessedData with instruction:=inst; 
+adaptedInst : DpEvent  with instruction:=inst;
+infringNotified : DpEvent  with instruction:=inst; 
+suspendNoticed : DpEvent  with instruction:=inst;
+modifiedInst : DpEvent with instruction:=inst;
+recoProcessedData : RecordedProcess;
+paid : Paid;  
+deliveredRecord : DeliveredRecord;
+requestedRecord : RequestReco;
+
+
+Obligations
+
+OproccData :O(Atos, Client, true, Happens(processedData));    
+
+OproccDataInst : Happens(processedData) -> O(Client, Atos,true,((processedData.instruction.originData == inst.originData) and 
+	                                                               (processedData.instruction.regionData == inst.regionData) and 
+	                                                               (processedData.instruction.categoriesDataSubjects == inst.categoriesDataSubjects) and             
+	                                                               (processedData.instruction.categoriesProcessingActivity == inst.categoriesProcessingActivity)));
+	                                                                    
+OadaptInst : Happens(infringNotified) -> O(Client, Atos, true, Happens(adaptedInst));
+
+OrecordData : Happens(processedData) -> O(Atos, Client, true, Happens(recoProcessedData) and processedData.data == recoProcessedData.data );
+
+Opaid :  Happens(processedData) -> O(Client, Atos, true, Happens(paid));
+
+OdelRecord : Happens(requestedRecord) -> O(Atos, Client,(((requestedRecord.data.type == personalData) and (inst.personalData == true)) and 
+	                                        ((requestedRecord.data.type == biometricData) and (inst.biometricData == true))), Happens(deliveredRecord) 
+	                                        and (requestedRecord.data.type == deliveredRecord.data.type));
+                                     
+Powers
+PsuspendPerformance : Happens(Violated(OadaptInst)) -> P(Atos, Client,Happens(suspendNoticed) ,Suspended(OproccData));  
+PresumPerformance : Happens(modifiedInst) -> P(Client, Atos, true, Resumed(OproccData));
+
+
+Constraints
+	not(Atos == Client);
+
+endContract

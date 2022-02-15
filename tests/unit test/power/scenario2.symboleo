@@ -1,0 +1,25 @@
+/* 
+ * Description: two powers terminates the contract
+ * Challenge: conjunction of powers as a situation for a contract termination
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Asset1 isAn Asset with owner: String, att1: Number;
+Event1 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, att_val1 : Number, owner : String)
+
+Declarations
+asset1: Asset1 with owner := owner, att1 := att_val1;
+event1: Event1;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event1));
+
+Powers
+Pw1: P(role1, role2, true, Terminated(self));
+Pw2: P(role2, role1, true, Terminated(self));
+
+endContract

@@ -1,0 +1,24 @@
+/* 
+ * Description: use an obligation/power/contract event in predicates
+ * Challenge: Constraints on time
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Event1 isAn Event with att1: Number;
+Event2 isAn Event with att2: Number;
+
+endDomain
+
+Contract contr (role : Role1, role2 : Role2, party1: String, party2: String, att_val1 : Number, att_val2 : Number)
+
+Declarations
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+event1: Event1 with att1 := att_val1;
+event2: Event2 with att2 := att_val2;
+
+Obligations
+Obl1: ShappensBefore(event1, att_val1) -> O(role1, role2, true, HappensAfter(event2, att_val2));
+
+endContract

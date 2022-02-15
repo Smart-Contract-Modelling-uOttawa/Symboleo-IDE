@@ -1,0 +1,45 @@
+/* 
+ * Description: inherit an asset
+ * Challenge: asset inheritance
+ * */
+Domain domain
+Buyer isA Role;
+Seller isA Role;
+Currency isAn Enumeration(CAD, USD, EUR);
+MeatQuality isAn Enumeration(PRIME, AAA, AA, A);
+PerishableGood isAn Asset with owner: String, quantity: Number, quality: MeatQuality;
+Meat isA PerishableGood with owner: String;
+Delivered isAn Event with item: Meat, deliverAddress: String, delDueDate: Date;
+Paid isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller, payDueDate: Date;
+PaidLate isAn Event with amunt: Number, currency: Currency, from: Buyer, to: Seller;
+Disclosed isAn Event;
+endDomain
+
+Contract contr (buyer : Buyer, seller : Seller, party1: String, party2: String, qnt : Number, qlt : MeatQuality, amt : Number, curr : Currency, payDueDate : Date, delAdd : String, effDate : Date, delDueDateDays : Number, interestRate: Number)
+
+Declarations
+buyer: Buyer with party:= party1;
+seller: Seller with party:= party2;
+goods: Meat with owner:= party1, quantity := qnt, quality := qlt;
+delivered: Delivered with item := goods, deliveryAddress := delAdd, delDueDate := delDueDateDays;
+paid: Paid with amount := amt, currency := curr, from := buyer, to := seller, payDueDate := payDueDate;
+paidLate: PaidLate with amount := (1 + interestRate / 2), currency := curr, from := buyer, to := seller;
+disclosed: Disclosed;
+
+Preconditions
+not IsEqual(party1, party2) and IsOwner(goods, seller);
+
+Obligations
+delivery: O(seller, buyer, true, ShappensBefore(delivered, delDueDate));
+payment: O(buyer, seller , true, ShappensBefore(paid, payDueDate));
+latePayment: Happens(Violated(payment)) -> O(buyer, seller, true, Happens(paidLate));
+
+Surviving Obligations
+SO1 : O(seller, buyer, true, not ShappensBefore(disclosed, addTime(Activated(self), 6, weeks)));
+
+Powers
+suspendDelivery : Happens(Violated(payment)) -> Power(seller, buyer, true, Suspended(delivery));
+//resumeDelivery: HappensWithin(paidLae, Suspension(delivery)) -> P(buyer, seller, true, Resumed(delivery));
+
+
+endContract

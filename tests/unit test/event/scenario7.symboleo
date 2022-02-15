@@ -1,0 +1,23 @@
+/* 
+ * Description: define an event with asset attribute
+ * Challenge: asset as attribute
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Asset1 isAn Asset with att1: String, att2: String;
+Event1 isAn Event with att3: Asset1, att4: String;
+endDomain
+
+Contract contr (role : Role1, role2 : Role2, party1: String, party2: String, att_val1 : String, att_val2 : String, att_val4 : String)
+
+Declarations
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+asset1: Asset1 with att1:= att_val1, att2:= att_val2;
+event1: Event1 with att3 := asset1, att4:= att_val4;
+
+Obligations
+Obl1: O(role1, role2, true, Happens(event2));
+
+endContract

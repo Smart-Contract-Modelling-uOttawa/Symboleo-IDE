@@ -1,0 +1,28 @@
+/* 
+ * Description: inherit an asset
+ * Challenge: asset inheritance
+ * */
+Domain domain
+Role1 isA Role;
+Role2 isA Role;
+Asset1 isAn Asset with owner: String, att1: Number;
+Asset2 isAn Asset1 with att2: String;
+Event1 isAn Event;
+endDomain
+
+Contract contr (role1 : Role1, role2 : Role2, party1: String, party2: String, att_val1 : Number, att_val2 : String, owner : String)
+
+Declarations
+asset2: Asset2 with owner := owner, att1 := att_val1, att2 := att_val2;
+role1: Role1 with party:= party1;
+role2: Role2 with party:= party2;
+event1: Event1;
+
+Obligations
+
+Obl1: O(role1, role2, true, ShappensBefore(event1, att_val2));
+
+Constraints
+ShappensBefore(event1, att_val2);
+
+endContract
