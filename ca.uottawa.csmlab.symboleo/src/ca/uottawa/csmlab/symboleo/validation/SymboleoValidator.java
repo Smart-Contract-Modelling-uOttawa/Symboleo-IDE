@@ -64,7 +64,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 
   @Check(CheckType.FAST)
   public void checkParametersStartWithLowerCase(Parameter p) {
-    if (!Character.isUpperCase(p.getName().charAt(0))) {
+    if (!Character.isLowerCase(p.getName().charAt(0))) {
       error("Parameter name should start with a lowercase letter", p,
           SymboleoPackage.Literals.PARAMETER__NAME);
     }
@@ -72,7 +72,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 
   @Check(CheckType.FAST)
   public void checkVariablesStartWithLowerCase(Variable v) {
-    if (!Character.isUpperCase(v.getName().charAt(0))) {
+    if (!Character.isLowerCase(v.getName().charAt(0))) {
       error("Variable name should start with a lowercase letter", v,
           SymboleoPackage.Literals.VARIABLE__NAME);
     }
@@ -80,7 +80,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 
   @Check(CheckType.FAST)
   public void checkObligationsStartWithLowerCase(Obligation o) {
-    if (!Character.isUpperCase(o.getName().charAt(0))) {
+    if (!Character.isLowerCase(o.getName().charAt(0))) {
       error("Obligation name should start with a lowercase letter", o,
           SymboleoPackage.Literals.OBLIGATION__NAME);
     }
@@ -88,7 +88,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 
   @Check(CheckType.FAST)
   public void checkPowersStartWithLowerCase(Power o) {
-    if (!Character.isUpperCase(o.getName().charAt(0))) {
+    if (!Character.isLowerCase(o.getName().charAt(0))) {
       error("Power name should start with a lowercase letter", o,
           SymboleoPackage.Literals.POWER__NAME);
     }

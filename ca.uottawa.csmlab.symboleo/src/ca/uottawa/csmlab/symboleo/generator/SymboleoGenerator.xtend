@@ -64,7 +64,6 @@ import java.util.HashMap
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomDoubleLiteral
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunction
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappens
-import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensBefore
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensAfter
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensWithin
 import ca.uottawa.csmlab.symboleo.symboleo.Event
@@ -100,6 +99,8 @@ import ca.uottawa.csmlab.symboleo.symboleo.TimevalueVariable
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgStringFunction
 import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
 import ca.uottawa.csmlab.symboleo.Helpers
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionSHappensBefore
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionWHappensBefore
 
 //
 /**
@@ -282,7 +283,7 @@ class SymboleoGenerator extends AbstractGenerator {
   def void generateNPMFile(IFileSystemAccess2 fsa, Model model) {
     val file = '''
       {
-        "name": "«model.contractName.toLowerCase»",
+        "name": "Â«model.contractName.toLowerCaseÂ»",
         "version": "1.0.0",
         "description": "",
         "main": "index.js",
@@ -323,57 +324,57 @@ class SymboleoGenerator extends AbstractGenerator {
     for (obligation : obligationTriggerEvents.keySet) {
       arrays.add(
         generateEventMapLineString(
-          obligationTriggerEvents.get(obligation), '''EventListeners.createObligation_«obligation.name»'''))
+          obligationTriggerEvents.get(obligation), '''EventListeners.createObligation_Â«obligation.nameÂ»'''))
     }
     for (obligation : survivingObligationTriggerEvents.keySet) {
       arrays.add(
         generateEventMapLineString(survivingObligationTriggerEvents.get(
-          obligation), '''EventListeners.createSurvivingObligation_«obligation.name»'''))
+          obligation), '''EventListeners.createSurvivingObligation_Â«obligation.nameÂ»'''))
     }
     for (power : powerTriggerEvents.keySet) {
       arrays.add(
-        generateEventMapLineString(powerTriggerEvents.get(power), '''EventListeners.createPower_«power.name»'''))
+        generateEventMapLineString(powerTriggerEvents.get(power), '''EventListeners.createPower_Â«power.nameÂ»'''))
     }
 
     // antecedent events
     for (obligation : obligationAntecedentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(
-          obligationAntecedentEvents.get(obligation), '''EventListeners.activateObligation_«obligation.name»'''))
+          obligationAntecedentEvents.get(obligation), '''EventListeners.activateObligation_Â«obligation.nameÂ»'''))
     }
     for (obligation : survivingObligationAntecedentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(survivingObligationAntecedentEvents.get(
-          obligation), '''EventListeners.activateSurvivingObligation_«obligation.name»'''))
+          obligation), '''EventListeners.activateSurvivingObligation_Â«obligation.nameÂ»'''))
     }
     for (power : powerAntecedentEvents.keySet) {
       arrays.add(
-        generateEventMapLineString(powerAntecedentEvents.get(power), '''EventListeners.activatePower_«power.name»'''))
+        generateEventMapLineString(powerAntecedentEvents.get(power), '''EventListeners.activatePower_Â«power.nameÂ»'''))
     }
 
     // fulfill obigation events
     for (obligation : obligationFullfilmentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(
-          obligationFullfilmentEvents.get(obligation), '''EventListeners.fulfillObligation_«obligation.name»'''))
+          obligationFullfilmentEvents.get(obligation), '''EventListeners.fulfillObligation_Â«obligation.nameÂ»'''))
     }
     for (obligation : survivingObligationFullfilmentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(survivingObligationFullfilmentEvents.get(
-          obligation), '''EventListeners.fulfillSurvivingObligation_«obligation.name»'''))
+          obligation), '''EventListeners.fulfillSurvivingObligation_Â«obligation.nameÂ»'''))
     }
     // contract termination
     for (obligation : allObligations) {
       arrays.
-        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
+        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.Â«obligation.nameÂ»)], EventListeners.terminateContract],''')
     }
 
     return '''
       export function getEventMap(contract) {
         return [
-          «FOR line : arrays»
-            «line»
-          «ENDFOR»
+          Â«FOR line : arraysÂ»
+            Â«lineÂ»
+          Â«ENDFORÂ»
         ]
       }
     '''
@@ -381,18 +382,18 @@ class SymboleoGenerator extends AbstractGenerator {
   
   def void compileSerializerFile(IFileSystemAccess2 fsa, Model model) {
     val code = '''
-    import { «model.contractName» } from "./domain/contract/«model.contractName».js"
-    import { Obligation, ObligationActiveState, ObligationState } from «OBLIGATION_CLASS_IMPORT_PATH»
-    import { InternalEventType, InternalEvent, InternalEventSource} from «EVENTS_CLASS_IMPORT_PATH»
-    import { Event } from «EVENTS_CLASS_IMPORT_PATH»
-    import { Power } from «POWER_CLASS_IMPORT_PATH»
-    import { ContractStates, ContractActiveStates } from «CONTRACT_CLASS_IMPORT_PATH»
-    import { Events } from «EVENTS_CLASS_IMPORT_PATH»
+    import { Â«model.contractNameÂ» } from "./domain/contract/Â«model.contractNameÂ».js"
+    import { Obligation, ObligationActiveState, ObligationState } from Â«OBLIGATION_CLASS_IMPORT_PATHÂ»
+    import { InternalEventType, InternalEvent, InternalEventSource} from Â«EVENTS_CLASS_IMPORT_PATHÂ»
+    import { Event } from Â«EVENTS_CLASS_IMPORT_PATHÂ»
+    import { Power } from Â«POWER_CLASS_IMPORT_PATHÂ»
+    import { ContractStates, ContractActiveStates } from Â«CONTRACT_CLASS_IMPORT_PATHÂ»
+    import { Events } from Â«EVENTS_CLASS_IMPORT_PATHÂ»
     import { EventListeners, getEventMap } from "./events.js"
     
     export function deserialize(data) {
       const object = JSON.parse(data)
-      const contract = new «model.contractName»(«model.parameters.map[Parameter p | "object." + p.name].join(',')»)
+      const contract = new Â«model.contractNameÂ»(Â«model.parameters.map[Parameter p | "object." + p.name].join(',')Â»)
       
       contract.state = object.state
       contract.activeState = object.activeState
@@ -407,7 +408,7 @@ class SymboleoGenerator extends AbstractGenerator {
         }
       }
     
-      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
+      for (const key of [Â«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')Â»]) {
         if (object[key].triggered === true) {
           contract[key].triggered = true
           contract[key].timestamp = object[key].timestamp
@@ -415,59 +416,59 @@ class SymboleoGenerator extends AbstractGenerator {
         }
       }
     
-      «FOR obligation : allObligations»
-      if (object.obligations.«obligation.name» != null) {
-        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
-        obligation.state = object.obligations.«obligation.name».state
-        obligation.activeState = object.obligations.«obligation.name».activeState
+      Â«FOR obligation : allObligationsÂ»
+      if (object.obligations.Â«obligation.nameÂ» != null) {
+        const obligation = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, "contract")Â», Â«generateDotExpressionString(obligation.debtor, "contract")Â», contract)
+        obligation.state = object.obligations.Â«obligation.nameÂ».state
+        obligation.activeState = object.obligations.Â«obligation.nameÂ».activeState
         for (const eventType of Object.keys(InternalEventType.obligation)) {
-          if (object.obligations.«obligation.name»._events[eventType] != null) {
+          if (object.obligations.Â«obligation.nameÂ»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.obligations.«obligation.name»._events[eventType].triggered
-            eventObject.timestamp = object.obligations.«obligation.name»._events[eventType].timestamp
-            eventObject.data = object.obligations.«obligation.name»._events[eventType].data
+            eventObject.triggered = object.obligations.Â«obligation.nameÂ»._events[eventType].triggered
+            eventObject.timestamp = object.obligations.Â«obligation.nameÂ»._events[eventType].timestamp
+            eventObject.data = object.obligations.Â«obligation.nameÂ»._events[eventType].data
             obligation._events[eventType] = eventObject
           }
         }
-        contract.obligations.«obligation.name» = obligation
+        contract.obligations.Â«obligation.nameÂ» = obligation
       }
-      «ENDFOR»
+      Â«ENDFORÂ»
     
-      «FOR obligation : allSurvivingObligations»
-      if (object.survivingObligations.«obligation.name» != null) {
-        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
-        obligation.state = object.survivingObligations.«obligation.name».state
-        obligation.activeState = object.survivingObligations.«obligation.name».activeState
+      Â«FOR obligation : allSurvivingObligationsÂ»
+      if (object.survivingObligations.Â«obligation.nameÂ» != null) {
+        const obligation = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, "contract")Â», Â«generateDotExpressionString(obligation.debtor, "contract")Â», contract)
+        obligation.state = object.survivingObligations.Â«obligation.nameÂ».state
+        obligation.activeState = object.survivingObligations.Â«obligation.nameÂ».activeState
         for (const eventType of Object.keys(InternalEventType.obligation)) {
-          if (object.survivingObligations.«obligation.name»._events[eventType] != null) {
+          if (object.survivingObligations.Â«obligation.nameÂ»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.survivingObligations.«obligation.name»._events[eventType].triggered
-            eventObject.timestamp = object.survivingObligations.«obligation.name»._events[eventType].timestamp
-            eventObject.data = object.survivingObligations.«obligation.name»._events[eventType].data
+            eventObject.triggered = object.survivingObligations.Â«obligation.nameÂ»._events[eventType].triggered
+            eventObject.timestamp = object.survivingObligations.Â«obligation.nameÂ»._events[eventType].timestamp
+            eventObject.data = object.survivingObligations.Â«obligation.nameÂ»._events[eventType].data
             obligation._events[eventType] = eventObject
           }
         }
-        contract.survivingObligations.«obligation.name» = obligation
+        contract.survivingObligations.Â«obligation.nameÂ» = obligation
       }
-      «ENDFOR»
+      Â«ENDFORÂ»
       
-      «FOR power : allPowers»
-      if (object.powers.«power.name» != null) {
-        const power = new Power('«power.name»', «generateDotExpressionString(power.creditor, "contract")», «generateDotExpressionString(power.creditor, "contract")», contract)
-        power.state = object.powers.«power.name».state
-        power.activeState = object.powers.«power.name».activeState
+      Â«FOR power : allPowersÂ»
+      if (object.powers.Â«power.nameÂ» != null) {
+        const power = new Power('Â«power.nameÂ»', Â«generateDotExpressionString(power.creditor, "contract")Â», Â«generateDotExpressionString(power.creditor, "contract")Â», contract)
+        power.state = object.powers.Â«power.nameÂ».state
+        power.activeState = object.powers.Â«power.nameÂ».activeState
         for (const eventType of Object.keys(InternalEventType.power)) {
-          if (object.powers.«power.name»._events[eventType] != null) {
+          if (object.powers.Â«power.nameÂ»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.powers.«power.name»._events[eventType].triggered
-            eventObject.timestamp = object.powers.«power.name»._events[eventType].timestamp
-            eventObject.data = object.powers.«power.name»._events[eventType].data
+            eventObject.triggered = object.powers.Â«power.nameÂ»._events[eventType].triggered
+            eventObject.timestamp = object.powers.Â«power.nameÂ»._events[eventType].timestamp
+            eventObject.data = object.powers.Â«power.nameÂ»._events[eventType].data
             power._events[eventType] = eventObject
           }
         }
-        contract.powers.«power.name» = power
+        contract.powers.Â«power.nameÂ» = power
       }
-      «ENDFOR»
+      Â«ENDFORÂ»
       return contract
     }
     
@@ -500,116 +501,116 @@ class SymboleoGenerator extends AbstractGenerator {
   def void compileEventsFile(IFileSystemAccess2 fsa, Model model) {
 
     val code = '''
-      import { InternalEventSource, InternalEvent, InternalEventType } from «EVENTS_CLASS_IMPORT_PATH»
-      import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
-      import { Power } from «POWER_CLASS_IMPORT_PATH»
-      import { Predicates } from «PREDICATES_CLASS_IMPORT_PATH»
-      import { Utils } from «UTILS_CLASS_IMPORT_PATH»
-      import { Str } from «UTILS_CLASS_IMPORT_PATH»
-      «FOR enumeration : enumerations»
-      import { «enumeration.name» } from "./domain/types/«enumeration.name».js"
-      «ENDFOR»
+      import { InternalEventSource, InternalEvent, InternalEventType } from Â«EVENTS_CLASS_IMPORT_PATHÂ»
+      import { Obligation } from Â«OBLIGATION_CLASS_IMPORT_PATHÂ»
+      import { Power } from Â«POWER_CLASS_IMPORT_PATHÂ»
+      import { Predicates } from Â«PREDICATES_CLASS_IMPORT_PATHÂ»
+      import { Utils } from Â«UTILS_CLASS_IMPORT_PATHÂ»
+      import { Str } from Â«UTILS_CLASS_IMPORT_PATHÂ»
+      Â«FOR enumeration : enumerationsÂ»
+      import { Â«enumeration.nameÂ» } from "./domain/types/Â«enumeration.nameÂ».js"
+      Â«ENDFORÂ»
       
       export const EventListeners = {
-        «FOR obligation : obligationTriggerEvents.keySet»
-          createObligation_«obligation.name»(contract) { 
-            if («generatePropositionString(obligation.trigger)») {
-              contract.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
-              «IF (!obligationAntecedentEvents.containsKey(obligation))»
-              if («generatePropositionString(obligation.antecedent)») {
-                contract.obligations.«obligation.name».trigerredUnconditional()
-                «IF (!obligationFullfilmentEvents.containsKey(obligation))»
-                if («generatePropositionString(obligation.consequent)») {
-                  contract.obligations.«obligation.name».fulfilled()
+        Â«FOR obligation : obligationTriggerEvents.keySetÂ»
+          createObligation_Â«obligation.nameÂ»(contract) { 
+            if (Â«generatePropositionString(obligation.trigger)Â») {
+              contract.obligations.Â«obligation.nameÂ» = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, 'contract')Â», Â«generateDotExpressionString(obligation.debtor, 'contract')Â», contract)
+              Â«IF (!obligationAntecedentEvents.containsKey(obligation))Â»
+              if (Â«generatePropositionString(obligation.antecedent)Â») {
+                contract.obligations.Â«obligation.nameÂ».trigerredUnconditional()
+                Â«IF (!obligationFullfilmentEvents.containsKey(obligation))Â»
+                if (Â«generatePropositionString(obligation.consequent)Â») {
+                  contract.obligations.Â«obligation.nameÂ».fulfilled()
                 } else {
-                  contract.obligations.«obligation.name».violated()
+                  contract.obligations.Â«obligation.nameÂ».violated()
                 }
-                «ENDIF»
+                Â«ENDIFÂ»
               }
-              «ENDIF»
+              Â«ENDIFÂ»
             }
           },
-        «ENDFOR»
-        «FOR obligation : survivingObligationTriggerEvents.keySet»
-          createSurvivingObligation_«obligation.name»(contract) { 
-            if («generatePropositionString(obligation.trigger)») {
-              contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
-              «IF (!survivingObligationAntecedentEvents.containsKey(obligation))»
-              if («generatePropositionString(obligation.antecedent)») {
-                contract.survivingObligations.«obligation.name».trigerredUnconditional()
-                «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
-                if («generatePropositionString(obligation.consequent)») {
-                  contract.survivingObligations.«obligation.name».fulfilled()
+        Â«ENDFORÂ»
+        Â«FOR obligation : survivingObligationTriggerEvents.keySetÂ»
+          createSurvivingObligation_Â«obligation.nameÂ»(contract) { 
+            if (Â«generatePropositionString(obligation.trigger)Â») {
+              contract.survivingObligations.Â«obligation.nameÂ» = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, 'contract')Â», Â«generateDotExpressionString(obligation.debtor, 'contract')Â», contract)
+              Â«IF (!survivingObligationAntecedentEvents.containsKey(obligation))Â»
+              if (Â«generatePropositionString(obligation.antecedent)Â») {
+                contract.survivingObligations.Â«obligation.nameÂ».trigerredUnconditional()
+                Â«IF (!survivingObligationFullfilmentEvents.containsKey(obligation))Â»
+                if (Â«generatePropositionString(obligation.consequent)Â») {
+                  contract.survivingObligations.Â«obligation.nameÂ».fulfilled()
                 } else {
-                  contract.survivingObligations.«obligation.name».violated()
+                  contract.survivingObligations.Â«obligation.nameÂ».violated()
                 }
-                «ENDIF»
+                Â«ENDIFÂ»
               }
-              «ENDIF»
+              Â«ENDIFÂ»
             }
           },
-        «ENDFOR»
-        «FOR power : powerTriggerEvents.keySet»
-          createPower_«power.name»(contract) { 
-            if («generatePropositionString(power.trigger)») {
-              contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
-              «IF (!powerAntecedentEvents.containsKey(power))»
-              if («generatePropositionString(power.antecedent)») {
-                contract.powers.«power.name».trigerredUnconditional()
+        Â«ENDFORÂ»
+        Â«FOR power : powerTriggerEvents.keySetÂ»
+          createPower_Â«power.nameÂ»(contract) { 
+            if (Â«generatePropositionString(power.trigger)Â») {
+              contract.powers.Â«power.nameÂ» = new Power('Â«power.nameÂ»', Â«generateDotExpressionString(power.creditor, 'contract')Â», Â«generateDotExpressionString(power.debtor, 'contract')Â», contract)
+              Â«IF (!powerAntecedentEvents.containsKey(power))Â»
+              if (Â«generatePropositionString(power.antecedent)Â») {
+                contract.powers.Â«power.nameÂ».trigerredUnconditional()
               }
-              «ENDIF»
+              Â«ENDIFÂ»
             }
           },
-        «ENDFOR»
-        «FOR obligation : obligationAntecedentEvents.keySet»
-          activateObligation_«obligation.name»(contract) { 
-            if (contract.obligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
-              contract.obligations.«obligation.name».activated()
-              «IF (!obligationFullfilmentEvents.containsKey(obligation))»
-              if («generatePropositionString(obligation.consequent)») {
-                contract.obligations.«obligation.name».fulfilled()
+        Â«ENDFORÂ»
+        Â«FOR obligation : obligationAntecedentEvents.keySetÂ»
+          activateObligation_Â«obligation.nameÂ»(contract) { 
+            if (contract.obligations.Â«obligation.nameÂ» != null && (Â«generatePropositionString(obligation.antecedent)Â»)) {
+              contract.obligations.Â«obligation.nameÂ».activated()
+              Â«IF (!obligationFullfilmentEvents.containsKey(obligation))Â»
+              if (Â«generatePropositionString(obligation.consequent)Â») {
+                contract.obligations.Â«obligation.nameÂ».fulfilled()
               } else {
-                contract.obligations.«obligation.name».violated()
+                contract.obligations.Â«obligation.nameÂ».violated()
               }
-              «ENDIF»
+              Â«ENDIFÂ»
             }
           },
-        «ENDFOR»
-        «FOR obligation : survivingObligationAntecedentEvents.keySet»
-          activateSurvivingObligation_«obligation.name»(contract) { 
-            if (contract.survivingObligations.«obligation.name» != null && («generatePropositionString(obligation.antecedent)»)) {
-              contract.survivingObligations.«obligation.name».activated()
-              «IF (!survivingObligationFullfilmentEvents.containsKey(obligation))»
-              if («generatePropositionString(obligation.consequent)») {
-                contract.survivingObligations.«obligation.name».fulfilled()
+        Â«ENDFORÂ»
+        Â«FOR obligation : survivingObligationAntecedentEvents.keySetÂ»
+          activateSurvivingObligation_Â«obligation.nameÂ»(contract) { 
+            if (contract.survivingObligations.Â«obligation.nameÂ» != null && (Â«generatePropositionString(obligation.antecedent)Â»)) {
+              contract.survivingObligations.Â«obligation.nameÂ».activated()
+              Â«IF (!survivingObligationFullfilmentEvents.containsKey(obligation))Â»
+              if (Â«generatePropositionString(obligation.consequent)Â») {
+                contract.survivingObligations.Â«obligation.nameÂ».fulfilled()
               } else {
-                contract.survivingObligations.«obligation.name».violated()
+                contract.survivingObligations.Â«obligation.nameÂ».violated()
               }
-              «ENDIF»              
+              Â«ENDIFÂ»              
             }
           },
-        «ENDFOR»
-        «FOR power : powerAntecedentEvents.keySet»
-          activatePower_«power.name»(contract) { 
-            if (contract.powers.«power.name» != null && («generatePropositionString(power.antecedent)»)) {
-              contract.powers.«power.name».activated()
+        Â«ENDFORÂ»
+        Â«FOR power : powerAntecedentEvents.keySetÂ»
+          activatePower_Â«power.nameÂ»(contract) { 
+            if (contract.powers.Â«power.nameÂ» != null && (Â«generatePropositionString(power.antecedent)Â»)) {
+              contract.powers.Â«power.nameÂ».activated()
             }
           },
-        «ENDFOR»
-        «FOR obligation : obligationFullfilmentEvents.keySet»
-          fulfillObligation_«obligation.name»(contract) { 
-            if (contract.obligations.«obligation.name» != null && («generatePropositionString(obligation.consequent)»)) {
-              contract.obligations.«obligation.name».fulfilled()
+        Â«ENDFORÂ»
+        Â«FOR obligation : obligationFullfilmentEvents.keySetÂ»
+          fulfillObligation_Â«obligation.nameÂ»(contract) { 
+            if (contract.obligations.Â«obligation.nameÂ» != null && (Â«generatePropositionString(obligation.consequent)Â»)) {
+              contract.obligations.Â«obligation.nameÂ».fulfilled()
             }
           },
-        «ENDFOR»
-        «FOR obligation : survivingObligationFullfilmentEvents.keySet»
-          fulfillSurvivingObligation_«obligation.name»(contract) { 
-            if (contract.survivingObligations.«obligation.name» != null && («generatePropositionString(obligation.consequent)»)) {
-              contract.survivingObligations.«obligation.name».fulfilled()
+        Â«ENDFORÂ»
+        Â«FOR obligation : survivingObligationFullfilmentEvents.keySetÂ»
+          fulfillSurvivingObligation_Â«obligation.nameÂ»(contract) { 
+            if (contract.survivingObligations.Â«obligation.nameÂ» != null && (Â«generatePropositionString(obligation.consequent)Â»)) {
+              contract.survivingObligations.Â«obligation.nameÂ».fulfilled()
             }
           },
-        «ENDFOR»
+        Â«ENDFORÂ»
         terminateContract(contract) {
           for (const oblKey of Object.keys(contract.obligations)) {
             if (contract.obligations[oblKey].isInEffect() || contract.obligations[oblKey].isCreated()) {
@@ -620,7 +621,7 @@ class SymboleoGenerator extends AbstractGenerator {
         }
       }
       
-      «compileEventsMap()»
+      Â«compileEventsMap()Â»
     '''
 
     fsa.generateFile("./" + model.contractName + "/" + "events.js", code)
@@ -633,21 +634,22 @@ class SymboleoGenerator extends AbstractGenerator {
       val pf = predicate.predicateFunction
       switch (pf) {
         PredicateFunctionHappens: line.append(generateEventObjectString(pf.event) + ', ')
-        PredicateFunctionHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
+        PredicateFunctionWHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
+        PredicateFunctionSHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
         PredicateFunctionHappensAfter: line.append(generateEventObjectString(pf.event) + ', ')
         PredicateFunctionHappensWithin: line.append(generateEventObjectString(pf.event) + ', ')
       }
     }
-    line.append('''], «listenerName»],''')
+    line.append('''], Â«listenerNameÂ»],''')
     return line.toString
   }
 
   def String generateEventObjectString(Event event) {
     switch (event) {
-      VariableEvent: return '''new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, «generateDotExpressionString(event.variable, 'contract')»)'''
-      ObligationEvent: return '''new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.«event.eventName», contract.«isSurvivingObligation(event.obligationVariable.name) ? "survivingObligations" : "obligations"».«event.obligationVariable.name»)'''
-      ContractEvent: return '''new InternalEvent(InternalEventSource.contract, InternalEventType.contract.«event.eventName», contract'''
-      PowerEvent: return '''new InternalEvent(InternalEventSource.power, InternalEventType.power.«event.eventName», contract.powers.«event.powerVariable.name»)'''
+      VariableEvent: return '''new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, Â«generateDotExpressionString(event.variable, 'contract')Â»)'''
+      ObligationEvent: return '''new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Â«event.eventNameÂ», contract.Â«isSurvivingObligation(event.obligationVariable.name) ? "survivingObligations" : "obligations"Â».Â«event.obligationVariable.nameÂ»)'''
+      ContractEvent: return '''new InternalEvent(InternalEventSource.contract, InternalEventType.contract.Â«event.eventNameÂ», contract'''
+      PowerEvent: return '''new InternalEvent(InternalEventSource.power, InternalEventType.power.Â«event.eventNameÂ», contract.powers.Â«event.powerVariable.nameÂ»)'''
     }
   }
   
@@ -730,29 +732,30 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String generatePredicateFunctionString(PredicateFunction predicate) {
     switch (predicate) {
-      PredicateFunctionHappens: return '''Predicates.happens(«generateEventVariableString(predicate.event)»)'''
-      PredicateFunctionHappensBefore: return '''Predicates.happensBefore(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)»)'''
-      PredicateFunctionHappensAfter: return '''Predicates.happensAfter(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)»)'''
-      PredicateFunctionHappensWithin: return '''Predicates.happensWithin(«generateEventVariableString(predicate.event)», «generateIntervalExpresionString(predicate.interval.intervalExpression)»)'''
+      PredicateFunctionHappens: return '''Predicates.happens(Â«generateEventVariableString(predicate.event)Â»)'''
+      PredicateFunctionWHappensBefore: return '''Predicates.happensBefore(Â«generateEventVariableString(predicate.event)Â», Â«generatePointExpresionString(predicate.point.pointExpression)Â»)'''
+      PredicateFunctionSHappensBefore: return '''Predicates.happensBefore(Â«generateEventVariableString(predicate.event)Â», Â«generatePointExpresionString(predicate.point.pointExpression)Â»)'''
+      PredicateFunctionHappensAfter: return '''Predicates.happensAfter(Â«generateEventVariableString(predicate.event)Â», Â«generatePointExpresionString(predicate.point.pointExpression)Â»)'''
+      PredicateFunctionHappensWithin: return '''Predicates.happensWithin(Â«generateEventVariableString(predicate.event)Â», Â«generateIntervalExpresionString(predicate.interval.intervalExpression)Â»)'''
     }
   }
 
   def String generateEventVariableString(Event event) {
     switch (event) {
       VariableEvent: return generateDotExpressionString(event.variable, 'contract')
-      PowerEvent: return '''contract.powers.«event.powerVariable.name»._events.«event.eventName»'''
-      ObligationEvent: return '''contract.obligations.«event.obligationVariable.name»._events.«event.eventName»'''
-      ContractEvent: return '''contract._events.«event.eventName»'''
+      PowerEvent: return '''contract.powers.Â«event.powerVariable.nameÂ»._events.Â«event.eventNameÂ»'''
+      ObligationEvent: return '''contract.obligations.Â«event.obligationVariable.nameÂ»._events.Â«event.eventNameÂ»'''
+      ContractEvent: return '''contract._events.Â«event.eventNameÂ»'''
     }
   }
 
   def String generatePointExpresionString(PointExpression point) {
     switch (point) {
-      PointFunction: return '''Utils.addTime(«generatePointExpresionString(point.arg)», «generateTimeValueString(point.value)», "«point.timeUnit»")'''
+      PointFunction: return '''Utils.addTime(Â«generatePointExpresionString(point.arg)Â», Â«generateTimeValueString(point.value)Â», "Â«point.timeUnitÂ»")'''
       PointAtomParameterDotExpression: return generateDotExpressionString(point.variable, 'contract')
-      PointAtomObligationEvent: return '''contract.obligations.«(point.obligationEvent as ObligationEvent).obligationVariable.name»._events.«(point.obligationEvent as ObligationEvent).eventName».timestamp'''
-      PointAtomPowerEvent: return '''contract.powers.«(point.powerEvent as PowerEvent).powerVariable.name»._events.«(point.powerEvent as PowerEvent).eventName».timestamp'''
-      PointAtomContractEvent: return '''contract._events.«(point.contractEvent as ContractEvent).eventName».timestamp'''
+      PointAtomObligationEvent: return '''contract.obligations.Â«(point.obligationEvent as ObligationEvent).obligationVariable.nameÂ»._events.Â«(point.obligationEvent as ObligationEvent).eventNameÂ».timestamp'''
+      PointAtomPowerEvent: return '''contract.powers.Â«(point.powerEvent as PowerEvent).powerVariable.nameÂ»._events.Â«(point.powerEvent as PowerEvent).eventNameÂ».timestamp'''
+      PointAtomContractEvent: return '''contract._events.Â«(point.contractEvent as ContractEvent).eventNameÂ».timestamp'''
     }
   }
 
@@ -766,13 +769,13 @@ class SymboleoGenerator extends AbstractGenerator {
   def String generateIntervalExpresionString(IntervalExpression interval) {
     switch (interval) {
       IntervalFunction:
-        return '''«generatePointExpresionString(interval.arg1)», «generatePointExpresionString(interval.arg2)»'''
+        return '''Â«generatePointExpresionString(interval.arg1)Â», Â«generatePointExpresionString(interval.arg2)Â»'''
       SituationExpression: {
         val situation = interval.situation
         switch (situation) {
-          ObligationState: return '''contract.obligations.«situation.obligationVariable.name», "«situation.stateName»"'''
-          PowerState: return '''contract.powers.«situation.powerVariable.name», "«situation.stateName»""'''
-          ContractState: return '''contract, "«situation.stateName»"'''
+          ObligationState: return '''contract.obligations.Â«situation.obligationVariable.nameÂ», "Â«situation.stateNameÂ»"'''
+          PowerState: return '''contract.powers.Â«situation.powerVariable.nameÂ», "Â«situation.stateNameÂ»""'''
+          ContractState: return '''contract, "Â«situation.stateNameÂ»"'''
         }
       }
     }
@@ -781,48 +784,47 @@ class SymboleoGenerator extends AbstractGenerator {
   def void compileTransactionFile(IFileSystemAccess2 fsa, Model model) {
     val code = '''
       import { Contract } from 'fabric-contract-api' 
-      import { «model.contractName» } from "./domain/contract/«model.contractName».js"
+      import { Â«model.contractNameÂ» } from "./domain/contract/Â«model.contractNameÂ».js"
       import { deserialize, serialize } from "./serializer.js"
-      import { Events } from «EVENT_CLASS_IMPORT_PATH»
-      import { InternalEvent, InternalEventSource, InternalEventType } from «EVENT_CLASS_IMPORT_PATH»
+      import { Events } from Â«EVENT_CLASS_IMPORT_PATHÂ»
+      import { InternalEvent, InternalEventSource, InternalEventType } from Â«EVENT_CLASS_IMPORT_PATHÂ»
       import { getEventMap, EventListeners } from "./events.js"
-      «««      «FOR asset : assets»
-«««        import { «asset.name» } from "./domain/assets/«asset.name»"
-«««      «ENDFOR»
-«««      «FOR event : events»
-«««        import { «event.name» } from "./domain/events/«event.name»"
-«««      «ENDFOR»
-«««      «FOR role : roles»
-«««        import { «role.name» } from "./domain/roles/«role.name»"
-«««      «ENDFOR»
-«««      «FOR enumeration : enumerations»
-«««        import { «enumeration.name» } from "./domain/types/«enumeration.name»"
-«««      «ENDFOR»
-
+      Â«Â«Â«      Â«FOR asset : assetsÂ»
+Â«Â«Â«        import { Â«asset.nameÂ» } from "./domain/assets/Â«asset.nameÂ»"
+Â«Â«Â«      Â«ENDFORÂ»
+Â«Â«Â«      Â«FOR event : eventsÂ»
+Â«Â«Â«        import { Â«event.nameÂ» } from "./domain/events/Â«event.nameÂ»"
+Â«Â«Â«      Â«ENDFORÂ»
+Â«Â«Â«      Â«FOR role : rolesÂ»
+Â«Â«Â«        import { Â«role.nameÂ» } from "./domain/roles/Â«role.nameÂ»"
+Â«Â«Â«      Â«ENDFORÂ»
+Â«Â«Â«      Â«FOR enumeration : enumerationsÂ»
+Â«Â«Â«        import { Â«enumeration.nameÂ» } from "./domain/types/Â«enumeration.nameÂ»"
+Â«Â«Â«      Â«ENDFORÂ»
       class HFContract extends Contract {
         
         constructor() {
-          super('«model.contractName»');
+          super('Â«model.contractNameÂ»');
         }
       
         initialize(contract) {
           Events.init(getEventMap(contract), EventListeners)
         }
       
-        «compileInitMethod(model)»
+        Â«compileInitMethod(model)Â»
       
-        «FOR method : compileEventTriggerMethods(model)»
-          «method»
+        Â«FOR method : compileEventTriggerMethods(model)Â»
+          Â«methodÂ»
           
-        «ENDFOR»
-        «FOR method : compilePowerTransactions(model)»
-          «method»
+        Â«ENDFORÂ»
+        Â«FOR method : compilePowerTransactions(model)Â»
+          Â«methodÂ»
           
-        «ENDFOR»
-        «FOR method : compileViolationEventsTransactions(model)»
-          «method»
+        Â«ENDFORÂ»
+        Â«FOR method : compileViolationEventsTransactions(model)Â»
+          Â«methodÂ»
           
-        «ENDFOR»
+        Â«ENDFORÂ»
       }
     '''
     fsa.generateFile("./" + model.contractName + "/" + "transactions.js", code)
@@ -833,7 +835,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
     for (obligation : allObligations) {
       methods.add('''
-        async violateObligation_«obligation.name»(ctx, contractId) {
+        async violateObligation_Â«obligation.nameÂ»(ctx, contractId) {
           const contractState = await ctx.stub.getState(contractId)
           if (contractState == null) {
             return {successful: false}
@@ -842,7 +844,7 @@ class SymboleoGenerator extends AbstractGenerator {
           this.initialize(contract)
         
           if (contract.isInEffect()) {
-            if (contract.obligation.«obligation.name» != null && contract.obligation.«obligation.name».violated()) {      
+            if (contract.obligation.Â«obligation.nameÂ» != null && contract.obligation.Â«obligation.nameÂ».violated()) {      
               await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
               return {successful: true}
             } else {
@@ -856,7 +858,7 @@ class SymboleoGenerator extends AbstractGenerator {
     }
     for (obligation : allSurvivingObligations) {
       methods.add('''
-        async violateSurvivingObligations_«obligation.name»(ctx, contractId) {
+        async violateSurvivingObligations_Â«obligation.nameÂ»(ctx, contractId) {
           const contractState = await ctx.stub.getState(contractId)
           if (contractState == null) {
             return {successful: false}
@@ -864,7 +866,7 @@ class SymboleoGenerator extends AbstractGenerator {
           const contract = deserialize(contractState)
         
           if (contract.isInEffect()) {
-            if (contract.survivingObligations.«obligation.name» != null && contract.survivingObligations.«obligation.name».violated()) {      
+            if (contract.survivingObligations.Â«obligation.nameÂ» != null && contract.survivingObligations.Â«obligation.nameÂ».violated()) {      
               await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
               return {successful: true}
             } else {
@@ -886,16 +888,16 @@ class SymboleoGenerator extends AbstractGenerator {
       switch (powerFunction) {
         PFObligationSuspended:
           methods.add(
-            generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'suspended'))
+            generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'suspended'))
         PFObligationResumed:
           methods.add(
-            generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'resumed'))
+            generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'resumed'))
         PFObligationDischarged:
           methods.add(
-            generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'discharged'))
+            generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'discharged'))
         PFObligationTerminated:
           methods.add(
-            generatePowerTransactionForObligation(power.name, powerFunction.obligationVariable.name, 'terminated'))
+            generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'terminated'))
         PFContractSuspended:
           methods.add(generatePowerTransactionForContract(power.name, 'suspended'))
         PFContractResumed:
@@ -909,7 +911,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String generatePowerTransactionForObligation(String powerName, String obligationName, String stateMethod) {
     return '''
-    async power_«stateMethod»Obligation_«obligationName»(ctx, contractId) {
+    async power_Â«stateMethodÂ»Obligation_Â«obligationNameÂ»(ctx, contractId) {
       const contractState = await ctx.stub.getState(contractId)
       if (contractState == null) {
         return {successful: false}
@@ -917,9 +919,9 @@ class SymboleoGenerator extends AbstractGenerator {
       const contract = deserialize(contractState)
       this.initialize(contract)
     
-      if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
-        const obligation = contractState.«isSurvivingObligation(obligationName) ? "survivingObligations" : "obligations"».«obligationName»
-        if (obligation != null && obligation.«stateMethod»() && contract.powers.«powerName».exerted()) {
+      if (contract.isInEffect() && contract.powers.Â«powerNameÂ» != null && contract.powers.Â«powerNameÂ».isInEffect()) {
+        const obligation = contractState.Â«isSurvivingObligation(obligationName) ? "survivingObligations" : "obligations"Â».Â«obligationNameÂ»
+        if (obligation != null && obligation.Â«stateMethodÂ»() && contract.powers.Â«powerNameÂ».exerted()) {
           await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
           return {successful: true}
         } else {
@@ -933,7 +935,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String generatePowerTransactionForContract(String powerName, String stateMethod) {
     return '''
-    async power_«stateMethod»Contract(ctx, contractId) {
+    async power_Â«stateMethodÂ»Contract(ctx, contractId) {
       const contractState = await ctx.stub.getState(contractId)
       if (contractState == null) {
         return {successful: false}
@@ -941,8 +943,8 @@ class SymboleoGenerator extends AbstractGenerator {
       const contract = deserialize(contractState)
       this.initialize(contract)
     
-      if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
-        if (contract.«stateMethod»() && contract.powers.«powerName».exerted()) {
+      if (contract.isInEffect() && contract.powers.Â«powerNameÂ» != null && contract.powers.Â«powerNameÂ».isInEffect()) {
+        if (contract.Â«stateMethodÂ»() && contract.powers.Â«powerNameÂ».exerted()) {
           await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
           return {successful: true}
         } else {
@@ -959,7 +961,7 @@ class SymboleoGenerator extends AbstractGenerator {
     val methods = new ArrayList<String>
     for (variable : eventVariables) {
       methods.add('''
-        async trigger_«variable.name»(ctx, contractId, event) {
+        async trigger_Â«variable.nameÂ»(ctx, contractId, event) {
           const contractState = await ctx.stub.getState(contractId)
           if (contractState == null) {
             return {successful: false}
@@ -967,8 +969,8 @@ class SymboleoGenerator extends AbstractGenerator {
           const contract = deserialize(contractState)
           this.initialize(contract)
           if (contract.isInEffect()) {
-            contract.«variable.name».happen(event)
-            Events.emitEvent(this, new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, contract.«variable.name»))
+            contract.Â«variable.nameÂ».happen(event)
+            Events.emitEvent(this, new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, contract.Â«variable.nameÂ»))
             await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
             return {successful: true}
           } else {
@@ -982,19 +984,19 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String compileInitMethod(Model model) {
     val code = '''
-      async init(ctx, «model.parameters.map[Parameter p | p.name].join(',')») {
-        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | p.name].join(',')»)
+      async init(ctx, Â«model.parameters.map[Parameter p | p.name].join(',')Â») {
+        const contractInstance = new Â«model.contractNameÂ» (Â«model.parameters.map[Parameter p | p.name].join(',')Â»)
         this.initialize(contractInstance)
         if (contractInstance.activated()) {
-          «FOR obligation : obligations»
-            contractInstance.obligations.«obligation.name».trigerredUnconditional()
-          «ENDFOR»
-          «FOR obligation : survivingObligations»
-            contractInstance.survivingObligations.«obligation.name».trigerredUnconditional()
-          «ENDFOR»
-          «FOR power : powers»
-            contractInstance.powers.«power.name».trigerredUnconditional()
-          «ENDFOR»
+          Â«FOR obligation : obligationsÂ»
+            contractInstance.obligations.Â«obligation.nameÂ».trigerredUnconditional()
+          Â«ENDFORÂ»
+          Â«FOR obligation : survivingObligationsÂ»
+            contractInstance.survivingObligations.Â«obligation.nameÂ».trigerredUnconditional()
+          Â«ENDFORÂ»
+          Â«FOR power : powersÂ»
+            contractInstance.powers.Â«power.nameÂ».trigerredUnconditional()
+          Â«ENDFORÂ»
       
           await ctx.stub.putState(contractInstance.id, Buffer.from(serialize(contractInstance)))
       
@@ -1010,54 +1012,54 @@ class SymboleoGenerator extends AbstractGenerator {
   // TODO creditor and debotor param
   def void compileContract(IFileSystemAccess2 fsa, Model model) {
     val code = '''
-      «FOR asset : assets»
-        import { «asset.name» } from "../assets/«asset.name».js"
-      «ENDFOR»
-      «FOR event : events»
-        import { «event.name» } from "../events/«event.name».js"
-      «ENDFOR»
-      «FOR role : roles»
-        import { «role.name» } from "../roles/«role.name».js"
-      «ENDFOR»
-      «FOR enumeration : enumerations»
-        import { «enumeration.name» } from "../types/«enumeration.name».js"
-      «ENDFOR»
-      import { SymboleoContract } from «CONTRACT_CLASS_IMPORT_PATH»
-      import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
-      import { Power } from «POWER_CLASS_IMPORT_PATH»
-      import { Utils } from «UTILS_CLASS_IMPORT_PATH»
-      import { Str } from «UTILS_CLASS_IMPORT_PATH»
+      Â«FOR asset : assetsÂ»
+        import { Â«asset.nameÂ» } from "../assets/Â«asset.nameÂ».js"
+      Â«ENDFORÂ»
+      Â«FOR event : eventsÂ»
+        import { Â«event.nameÂ» } from "../events/Â«event.nameÂ».js"
+      Â«ENDFORÂ»
+      Â«FOR role : rolesÂ»
+        import { Â«role.nameÂ» } from "../roles/Â«role.nameÂ».js"
+      Â«ENDFORÂ»
+      Â«FOR enumeration : enumerationsÂ»
+        import { Â«enumeration.nameÂ» } from "../types/Â«enumeration.nameÂ».js"
+      Â«ENDFORÂ»
+      import { SymboleoContract } from Â«CONTRACT_CLASS_IMPORT_PATHÂ»
+      import { Obligation } from Â«OBLIGATION_CLASS_IMPORT_PATHÂ»
+      import { Power } from Â«POWER_CLASS_IMPORT_PATHÂ»
+      import { Utils } from Â«UTILS_CLASS_IMPORT_PATHÂ»
+      import { Str } from Â«UTILS_CLASS_IMPORT_PATHÂ»
       
-      export class «model.contractName» extends SymboleoContract {
-        constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
+      export class Â«model.contractNameÂ» extends SymboleoContract {
+        constructor(Â«model.parameters.map[Parameter p | p.name].join(',')Â») {
           super()
-          this._name = "«model.contractName»"
-          «FOR parameter : model.parameters»
-            this.«parameter.name» = «parameter.name»
-          «ENDFOR»
+          this._name = "Â«model.contractNameÂ»"
+          Â«FOR parameter : model.parametersÂ»
+            this.Â«parameter.nameÂ» = Â«parameter.nameÂ»
+          Â«ENDFORÂ»
           
-          «FOR variable : model.variables»
-            «IF variable.type instanceof RegularType»
-              this.«variable.name» = new «variable.type.name»()
-              «FOR assignment: variable.attributes»
-                «IF assignment instanceof AssignVariable»
-                  this.«variable.name».«assignment.name» = «generateDotExpressionString(assignment.value, 'this')»
-                «ELSEIF assignment instanceof AssignExpression»
-                  this.«variable.name».«assignment.name» = «generateExpressionString(assignment.value, 'this')»
-                «ENDIF»  
-              «ENDFOR»
-            «ENDIF»
-          «ENDFOR»
+          Â«FOR variable : model.variablesÂ»
+            Â«IF variable.type instanceof RegularTypeÂ»
+              this.Â«variable.nameÂ» = new Â«variable.type.nameÂ»()
+              Â«FOR assignment: variable.attributesÂ»
+                Â«IF assignment instanceof AssignVariableÂ»
+                  this.Â«variable.nameÂ».Â«assignment.nameÂ» = Â«generateDotExpressionString(assignment.value, 'this')Â»
+                Â«ELSEIF assignment instanceof AssignExpressionÂ»
+                  this.Â«variable.nameÂ».Â«assignment.nameÂ» = Â«generateExpressionString(assignment.value, 'this')Â»
+                Â«ENDIFÂ»  
+              Â«ENDFORÂ»
+            Â«ENDIFÂ»
+          Â«ENDFORÂ»
           
-          «FOR obligation : obligations»
-            this.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
-          «ENDFOR»
-          «FOR obligation : survivingObligations»
-            this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
-          «ENDFOR»
-          «FOR power : powers»
-            this.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'this')», «generateDotExpressionString(power.debtor, 'this')», this)
-          «ENDFOR»          
+          Â«FOR obligation : obligationsÂ»
+            this.obligations.Â«obligation.nameÂ» = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, 'this')Â», Â«generateDotExpressionString(obligation.debtor, 'this')Â», this)
+          Â«ENDFORÂ»
+          Â«FOR obligation : survivingObligationsÂ»
+            this.survivingObligations.Â«obligation.nameÂ» = new Obligation('Â«obligation.nameÂ»', Â«generateDotExpressionString(obligation.creditor, 'this')Â», Â«generateDotExpressionString(obligation.debtor, 'this')Â», this)
+          Â«ENDFORÂ»
+          Â«FOR power : powersÂ»
+            this.powers.Â«power.nameÂ» = new Power('Â«power.nameÂ»', Â«generateDotExpressionString(power.creditor, 'this')Â», Â«generateDotExpressionString(power.debtor, 'this')Â», this)
+          Â«ENDFORÂ»          
         }
       }
     '''
@@ -1107,7 +1109,7 @@ class SymboleoGenerator extends AbstractGenerator {
       AtomicExpressionEnum:
         return argExpression.enumeration + "." + argExpression.enumItem
       AtomicExpressionString:
-        return argExpression.value
+        return '"' + argExpression.value + '"'
       AtomicExpressionParameter:
         return generateDotExpressionString(argExpression.value, thisString)
     }
@@ -1136,15 +1138,15 @@ class SymboleoGenerator extends AbstractGenerator {
       OneArgMathFunction:
         return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
       ThreeArgStringFunction:
-        return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
-          generateExpressionString(functionCall.arg1, thisString) + "," +generateExpressionString(functionCall.arg2, thisString) + ")"
+        return functionCall.name.replace("String", "Str") + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+          generateExpressionString(functionCall.arg2, thisString) + "," + generateExpressionString(functionCall.arg3, thisString) + ")"
       TwoArgStringFunction:
-        return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
+        return functionCall.name.replace("String", "Str") + "(" + generateExpressionString(functionCall.arg1, thisString) + "," +
           generateExpressionString(functionCall.arg2, thisString) + ")"
       OneArgStringFunction:
-        return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+        return functionCall.name.replace("String", "Str") + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
       ThreeArgDateFunction:
-        return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateExpressionString(functionCall.value, thisString)», "«functionCall.timeUnit»")'''
+        return '''Utils.addTime(Â«generateExpressionString(functionCall.arg1, thisString)Â», Â«generateExpressionString(functionCall.value, thisString)Â», "Â«functionCall.timeUnitÂ»")'''
     }
   }
 
@@ -1173,10 +1175,10 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def void generateEnumeration(IFileSystemAccess2 fsa, Model model, Enumeration enumeration) {
     val code = '''      
-      export const «enumeration.name» = {
-        «FOR item : enumeration.enumerationItems»
-          «item.name»: «enumeration.enumerationItems.indexOf(item)»,
-        «ENDFOR»
+      export const Â«enumeration.nameÂ» = {
+        Â«FOR item : enumeration.enumerationItemsÂ»
+          Â«item.nameÂ»: Â«enumeration.enumerationItems.indexOf(item)Â»,
+        Â«ENDFORÂ»
       }
     '''
     fsa.generateFile("./" + model.contractName + "/domain/types/" + enumeration.name + ".js", code)
@@ -1200,14 +1202,14 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Asset } from «ASSET_CLASS_IMPORT_PATH»;
+        import { Asset } from Â«ASSET_CLASS_IMPORT_PATHÂ»;
         
-        export class «asset.name» extends Asset {
-          constructor(«asset.attributes.map[Attribute a | a.name].join(',')») {
+        export class Â«asset.nameÂ» extends Asset {
+          constructor(Â«asset.attributes.map[Attribute a | a.name].join(',')Â») {
             super()
-            «FOR attribute : asset.attributes»
-              this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+            Â«FOR attribute : asset.attributesÂ»
+              this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''
@@ -1218,14 +1220,14 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(asset.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        import { Â«parentType.nameÂ» } from "./Â«parentType.nameÂ».js";
         
-        export class «asset.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(«parentAttributes.map[Attribute a | a.name].join(',')»)
-            «FOR attribute : asset.attributes»
-            this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+        export class Â«asset.nameÂ» extends Â«parentType.nameÂ» {
+          constructor(Â«allAttributes.map[Attribute a | a.name].join(',')Â») {
+            super(Â«parentAttributes.map[Attribute a | a.name].join(',')Â»)
+            Â«FOR attribute : asset.attributesÂ»
+            this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''
@@ -1238,15 +1240,15 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Event } from «EVENT_CLASS_IMPORT_PATH»;
+        import { Event } from Â«EVENT_CLASS_IMPORT_PATHÂ»;
         
-        export class «event.name» extends Event {
-          constructor(«event.attributes.map[Attribute a | a.name].join(',')») {
+        export class Â«event.nameÂ» extends Event {
+          constructor(Â«event.attributes.map[Attribute a | a.name].join(',')Â») {
             super()
-            this._name = "«event.name»"
-            «FOR attribute : event.attributes»
-            this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+            this._name = "Â«event.nameÂ»"
+            Â«FOR attribute : event.attributesÂ»
+            this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''
@@ -1257,15 +1259,15 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(event.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        import { Â«parentType.nameÂ» } from "./Â«parentType.nameÂ».js";
         
-        export class «event.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(«parentAttributes.map[Attribute a | a.name].join(',')»)
-            this._name = "«event.name»"
-            «FOR attribute : event.attributes»
-            this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+        export class Â«event.nameÂ» extends Â«parentType.nameÂ» {
+          constructor(Â«allAttributes.map[Attribute a | a.name].join(',')Â») {
+            super(Â«parentAttributes.map[Attribute a | a.name].join(',')Â»)
+            this._name = "Â«event.nameÂ»"
+            Â«FOR attribute : event.attributesÂ»
+            this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''
@@ -1278,14 +1280,14 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Role } from «ROLE_CLASS_IMPORT_PATH»;
+        import { Role } from Â«ROLE_CLASS_IMPORT_PATHÂ»;
         
-        export class «role.name» extends Role {
-          constructor(«role.attributes.map[Attribute a | a.name].join(',')») {
+        export class Â«role.nameÂ» extends Role {
+          constructor(Â«role.attributes.map[Attribute a | a.name].join(',')Â») {
             super()
-            «FOR attribute : role.attributes»
-            this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+            Â«FOR attribute : role.attributesÂ»
+            this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''
@@ -1296,14 +1298,14 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(role.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        import { Â«parentType.nameÂ» } from "./Â«parentType.nameÂ».js";
         
-        export class «role.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(«parentAttributes.map[Attribute a | a.name].join(',')»)
-            «FOR attribute : role.attributes»
-            this.«attribute.name» = «attribute.name»
-            «ENDFOR»
+        export class Â«role.nameÂ» extends Â«parentType.nameÂ» {
+          constructor(Â«allAttributes.map[Attribute a | a.name].join(',')Â») {
+            super(Â«parentAttributes.map[Attribute a | a.name].join(',')Â»)
+            Â«FOR attribute : role.attributesÂ»
+            this.Â«attribute.nameÂ» = Â«attribute.nameÂ»
+            Â«ENDFORÂ»
           }
         }
       '''

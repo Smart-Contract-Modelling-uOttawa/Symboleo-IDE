@@ -79,13 +79,13 @@ class Helpers {
     List<Variable> variables, List<Parameter> parameters) {
     switch (exp) {
       Or: {
-        // leftside type
+        // left side type
         val l = ca.uottawa.csmlab.symboleo.Helpers.
           resolveExpressionType(exp.left, variables, parameters)
         if(l.error !== null) {
           return l
         }
-        // rightside type
+        // right side type
         val r = ca.uottawa.csmlab.symboleo.Helpers.
           resolveExpressionType(exp.right, variables, parameters)
         if(r.error !== null) {
