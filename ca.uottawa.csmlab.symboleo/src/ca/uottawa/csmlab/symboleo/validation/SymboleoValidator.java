@@ -55,10 +55,42 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
   List<Parameter> parameters;
 
   @Check(CheckType.FAST)
-  public void checkDomainTypesStartsWithCapital(DomainType type) {
+  public void checkDomainTypesStartWithCapital(DomainType type) {
     if (!Character.isUpperCase(type.getName().charAt(0))) {
       error("Domain types should start with a capital letter", type,
           SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
+    }
+  }
+
+  @Check(CheckType.FAST)
+  public void checkParametersStartWithLowerCase(Parameter p) {
+    if (!Character.isUpperCase(p.getName().charAt(0))) {
+      error("Parameter name should start with a lowercase letter", p,
+          SymboleoPackage.Literals.PARAMETER__NAME);
+    }
+  }
+
+  @Check(CheckType.FAST)
+  public void checkVariablesStartWithLowerCase(Variable v) {
+    if (!Character.isUpperCase(v.getName().charAt(0))) {
+      error("Variable name should start with a lowercase letter", v,
+          SymboleoPackage.Literals.VARIABLE__NAME);
+    }
+  }
+
+  @Check(CheckType.FAST)
+  public void checkObligationsStartWithLowerCase(Obligation o) {
+    if (!Character.isUpperCase(o.getName().charAt(0))) {
+      error("Obligation name should start with a lowercase letter", o,
+          SymboleoPackage.Literals.OBLIGATION__NAME);
+    }
+  }
+
+  @Check(CheckType.FAST)
+  public void checkPowersStartWithLowerCase(Power o) {
+    if (!Character.isUpperCase(o.getName().charAt(0))) {
+      error("Power name should start with a lowercase letter", o,
+          SymboleoPackage.Literals.POWER__NAME);
     }
   }
 
@@ -71,14 +103,6 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
     this.parameters = model.getParameters();
 
     Set<String> identifiers = new HashSet<>();
-
-    for (DomainType x : model.getDomainTypes()) {
-      if (identifiers.contains(x.getName())) {
-        error("Duplicate identifier " + x.getName(), x,
-            SymboleoPackage.Literals.DOMAIN_TYPE__NAME);
-      }
-      identifiers.add(x.getName());
-    }
 
     for (Parameter x : model.getParameters()) {
       if (identifiers.contains(x.getName())) {
@@ -95,6 +119,15 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
       }
       identifiers.add(x.getName());
     }
+  }
+
+  /*
+   * Identifiers should be unique
+   */
+  @Check(CheckType.FAST)
+  public void checkIdentifiersAreUnique2(Model model) {
+
+    Set<String> identifiers = new HashSet<>();
 
     for (Obligation x : model.getObligations()) {
       if (identifiers.contains(x.getName())) {
@@ -125,7 +158,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
    * Check that model properties have unique names
    */
   @Check(CheckType.FAST)
-  public void checkModelAttrbiutesAreUnique(DomainType type) {
+  public void checkModelAttributesAreUnique(DomainType type) {
     if (type instanceof RegularType) {
       // set of property names
       Set<String> identifiers = new HashSet<>();
@@ -134,7 +167,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
           .getAttributesOfRegularType((RegularType) type)) {
         if (identifiers.contains(atr.getName())) {
           error(
-              "Duplicate attrbiute name '" + atr.getName() + "' in "
+              "Duplicate attribute name '" + atr.getName() + "' in "
                   + type.getName(),
               atr, SymboleoPackage.Literals.ATTRIBUTE__NAME);
         }
@@ -186,16 +219,16 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
         // Env values shall not be set
         if (mod.getName().equalsIgnoreCase("Env") && isInitiated) {
           error(
-              "Env attrbiute '" + res.get().getName() + "' in " + type.getName()
+              "Env attribute '" + res.get().getName() + "' in " + type.getName()
                   + " shall not be initiated.",
               res.get(), SymboleoPackage.Literals.ASSIGNMENT__NAME);
         }
       } else if (!isInitiated) {
         // all other attributes should be initiated
         error(
-            "Attrbiute '" + atr.getName() + "' is not initiated in variable '"
+            "Attribute '" + atr.getName() + "' is not initiated in variable '"
                 + var.getName() + "'. ",
-            atr, SymboleoPackage.Literals.ATTRIBUTE__NAME);
+            var, SymboleoPackage.Literals.VARIABLE__ATTRIBUTES);
       }
     }
   }
@@ -207,7 +240,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
   public void checkAssignmentsName(Variable var) {
     RegularType type = var.getType();
 
-    // get list of type attrbiutes
+    // get list of type attributes
     List<Attribute> attributes = Helpers
         .getAttributesOfRegularType((RegularType) type);
     for (Assignment assignment : var.getAttributes()) {
@@ -402,7 +435,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
     // run the check for every variable
     for (Variable var : model.getVariables()) {
       RegularType modelType = var.getType();
-      // get all attrbiutes of the type
+      // get all attributes of the type
       List<Attribute> attributes = Helpers
           .getAttributesOfRegularType((RegularType) modelType);
       for (Assignment asg : var.getAttributes()) {
@@ -656,3 +689,6 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
     }
   }
 }
+
+// warning about common keywords of Java, js , etc
+// Role, Asset, Event, when, for foreach while if else function __prototype 
