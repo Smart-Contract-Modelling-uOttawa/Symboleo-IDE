@@ -101,6 +101,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.ThreeArgDateFunction
 import ca.uottawa.csmlab.symboleo.Helpers
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionSHappensBefore
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionWHappensBefore
+import ca.uottawa.csmlab.symboleo.symboleo.OntologyType
 
 //
 /**
@@ -287,7 +288,6 @@ class SymboleoGenerator extends AbstractGenerator {
         "version": "1.0.0",
         "description": "",
         "main": "index.js",
-        "type": "module",
         "engines": {
           "node": ">=14",
           "npm": ">=5"
@@ -302,13 +302,15 @@ class SymboleoGenerator extends AbstractGenerator {
         "author": "Hyperledger",
         "license": "Apache-2.0",
         "dependencies": {
-          "fabric-contract-api": "^2.0.0",
-          "fabric-shim": "^2.0.0",
-          "symboleo-js-core": "git+ssh://git@github.com/Aidiiin/symboleo-js-core.git"
+          "fabric-contract-api": "^2.2.2",
+          "fabric-shim": "^2.2.2",
+          "symboleo-js-core": "^1.0.8"
         },
         "devDependencies": {
           "chai": "^4.1.2",
-          "eslint": "^4.19.1",
+          "eslint": "^8.7.0",
+          "eslint-config-airbnb-base": "^15.0.0",
+          "eslint-plugin-import": "^2.25.4",
           "mocha": "^8.0.1",
           "nyc": "^14.1.1",
           "sinon": "^6.0.0",
@@ -352,7 +354,7 @@ class SymboleoGenerator extends AbstractGenerator {
         generateEventMapLineString(powerAntecedentEvents.get(power), '''EventListeners.activatePower_«power.name»'''))
     }
 
-    // fulfill obigation events
+    // fulfill obligation events
     for (obligation : obligationFullfilmentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(
@@ -370,7 +372,7 @@ class SymboleoGenerator extends AbstractGenerator {
     }
 
     return '''
-      export function getEventMap(contract) {
+      function getEventMap(contract) {
         return [
           «FOR line : arrays»
             «line»
@@ -382,16 +384,16 @@ class SymboleoGenerator extends AbstractGenerator {
   
   def void compileSerializerFile(IFileSystemAccess2 fsa, Model model) {
     val code = '''
-    import { «model.contractName» } from "./domain/contract/«model.contractName».js"
-    import { Obligation, ObligationActiveState, ObligationState } from «OBLIGATION_CLASS_IMPORT_PATH»
-    import { InternalEventType, InternalEvent, InternalEventSource} from «EVENTS_CLASS_IMPORT_PATH»
-    import { Event } from «EVENTS_CLASS_IMPORT_PATH»
-    import { Power } from «POWER_CLASS_IMPORT_PATH»
-    import { ContractStates, ContractActiveStates } from «CONTRACT_CLASS_IMPORT_PATH»
-    import { Events } from «EVENTS_CLASS_IMPORT_PATH»
-    import { EventListeners, getEventMap } from "./events.js"
+    const { «model.contractName» } = require("./domain/contract/«model.contractName».js")
+    const { Obligation, ObligationActiveState, ObligationState } = require(«OBLIGATION_CLASS_IMPORT_PATH»)
+    const { InternalEventType, InternalEvent, InternalEventSource} = require(«EVENTS_CLASS_IMPORT_PATH»)
+    const { Event } = require(«EVENTS_CLASS_IMPORT_PATH»)
+    const { Power } = require(«POWER_CLASS_IMPORT_PATH»)
+    const { ContractStates, ContractActiveStates } = require(«CONTRACT_CLASS_IMPORT_PATH»)
+    const { Events } = require(«EVENTS_CLASS_IMPORT_PATH»)
+    const { EventListeners, getEventMap } = require("./events.js")
     
-    export function deserialize(data) {
+    function deserialize(data) {
       const object = JSON.parse(data)
       const contract = new «model.contractName»(«model.parameters.map[Parameter p | "object." + p.name].join(',')»)
       
@@ -401,18 +403,16 @@ class SymboleoGenerator extends AbstractGenerator {
       for (const eventType of Object.keys(InternalEventType.contract)) {
         if (object._events[eventType] != null) {
           const eventObject = new Event()
-          eventObject.triggered = object._events[eventType].triggered
-          eventObject.timestamp = object._events[eventType].timestamp
-          eventObject.data = object._events[eventType].data
+          eventObject._triggered = object._events[eventType]._triggered
+          eventObject._timestamp = object._events[eventType]._timestamp
           contract._events[eventType] = eventObject
         }
       }
     
       for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
         if (object[key].triggered === true) {
-          contract[key].triggered = true
-          contract[key].timestamp = object[key].timestamp
-          contract[key].data = object[key].data
+          contract[key]._triggered = true
+          contract[key]._timestamp = object[key].timestamp
         }
       }
     
@@ -424,9 +424,8 @@ class SymboleoGenerator extends AbstractGenerator {
         for (const eventType of Object.keys(InternalEventType.obligation)) {
           if (object.obligations.«obligation.name»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.obligations.«obligation.name»._events[eventType].triggered
-            eventObject.timestamp = object.obligations.«obligation.name»._events[eventType].timestamp
-            eventObject.data = object.obligations.«obligation.name»._events[eventType].data
+            eventObject._triggered = object.obligations.«obligation.name»._events[eventType]._triggered
+            eventObject._timestamp = object.obligations.«obligation.name»._events[eventType]._timestamp
             obligation._events[eventType] = eventObject
           }
         }
@@ -436,15 +435,14 @@ class SymboleoGenerator extends AbstractGenerator {
     
       «FOR obligation : allSurvivingObligations»
       if (object.survivingObligations.«obligation.name» != null) {
-        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
+        const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract, true)
         obligation.state = object.survivingObligations.«obligation.name».state
         obligation.activeState = object.survivingObligations.«obligation.name».activeState
         for (const eventType of Object.keys(InternalEventType.obligation)) {
           if (object.survivingObligations.«obligation.name»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.survivingObligations.«obligation.name»._events[eventType].triggered
-            eventObject.timestamp = object.survivingObligations.«obligation.name»._events[eventType].timestamp
-            eventObject.data = object.survivingObligations.«obligation.name»._events[eventType].data
+            eventObject._triggered = object.survivingObligations.«obligation.name»._events[eventType]._triggered
+            eventObject._timestamp = object.survivingObligations.«obligation.name»._events[eventType]._timestamp
             obligation._events[eventType] = eventObject
           }
         }
@@ -460,9 +458,8 @@ class SymboleoGenerator extends AbstractGenerator {
         for (const eventType of Object.keys(InternalEventType.power)) {
           if (object.powers.«power.name»._events[eventType] != null) {
             const eventObject = new Event()
-            eventObject.triggered = object.powers.«power.name»._events[eventType].triggered
-            eventObject.timestamp = object.powers.«power.name»._events[eventType].timestamp
-            eventObject.data = object.powers.«power.name»._events[eventType].data
+            eventObject._triggered = object.powers.«power.name»._events[eventType]._triggered
+            eventObject._timestamp = object.powers.«power.name»._events[eventType]._timestamp
             power._events[eventType] = eventObject
           }
         }
@@ -472,7 +469,7 @@ class SymboleoGenerator extends AbstractGenerator {
       return contract
     }
     
-    export function serialize(contract) {
+    function serialize(contract) {
       for (const key of Object.keys(contract.obligations)){
         contract.obligations[key].contract = undefined
         contract.obligations[key].creditor = undefined
@@ -493,6 +490,9 @@ class SymboleoGenerator extends AbstractGenerator {
     
       return JSON.stringify(contract)
     }
+    
+    module.exports.deserialize = deserialize
+    module.exports.serialize = serialize
     '''
     
     fsa.generateFile("./" + model.contractName + "/" + "serializer.js", code)
@@ -501,17 +501,17 @@ class SymboleoGenerator extends AbstractGenerator {
   def void compileEventsFile(IFileSystemAccess2 fsa, Model model) {
 
     val code = '''
-      import { InternalEventSource, InternalEvent, InternalEventType } from «EVENTS_CLASS_IMPORT_PATH»
-      import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
-      import { Power } from «POWER_CLASS_IMPORT_PATH»
-      import { Predicates } from «PREDICATES_CLASS_IMPORT_PATH»
-      import { Utils } from «UTILS_CLASS_IMPORT_PATH»
-      import { Str } from «UTILS_CLASS_IMPORT_PATH»
+      const { InternalEventSource, InternalEvent, InternalEventType } = require(«EVENTS_CLASS_IMPORT_PATH»)
+      const { Obligation } = require(«OBLIGATION_CLASS_IMPORT_PATH»)
+      const { Power } = require(«POWER_CLASS_IMPORT_PATH»)
+      const { Predicates } = require(«PREDICATES_CLASS_IMPORT_PATH»)
+      const { Utils } = require(«UTILS_CLASS_IMPORT_PATH»)
+      const { Str } = require(«UTILS_CLASS_IMPORT_PATH»)
       «FOR enumeration : enumerations»
-      import { «enumeration.name» } from "./domain/types/«enumeration.name».js"
+      const { «enumeration.name» } = require("./domain/types/«enumeration.name».js")
       «ENDFOR»
       
-      export const EventListeners = {
+      const EventListeners = {
         «FOR obligation : obligationTriggerEvents.keySet»
           createObligation_«obligation.name»(contract) { 
             if («generatePropositionString(obligation.trigger)») {
@@ -534,7 +534,7 @@ class SymboleoGenerator extends AbstractGenerator {
         «FOR obligation : survivingObligationTriggerEvents.keySet»
           createSurvivingObligation_«obligation.name»(contract) { 
             if («generatePropositionString(obligation.trigger)») {
-              contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
+              contract.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract, true)
               «IF (!survivingObligationAntecedentEvents.containsKey(obligation))»
               if («generatePropositionString(obligation.antecedent)») {
                 contract.survivingObligations.«obligation.name».trigerredUnconditional()
@@ -613,15 +613,18 @@ class SymboleoGenerator extends AbstractGenerator {
         «ENDFOR»
         terminateContract(contract) {
           for (const oblKey of Object.keys(contract.obligations)) {
-            if (contract.obligations[oblKey].isInEffect() || contract.obligations[oblKey].isCreated()) {
-              return
-            }
+             if (contract.obligations[oblKey].isActive()) {
+                 return;
+             }
           }
           contract.fulfilledActiveObligations()
         }
       }
       
       «compileEventsMap()»
+      
+      module.exports.EventListeners = EventListeners
+      module.exports.getEventMap = getEventMap
     '''
 
     fsa.generateFile("./" + model.contractName + "/" + "events.js", code)
@@ -773,9 +776,9 @@ class SymboleoGenerator extends AbstractGenerator {
       SituationExpression: {
         val situation = interval.situation
         switch (situation) {
-          ObligationState: return '''contract.obligations.«situation.obligationVariable.name», "«situation.stateName»"'''
-          PowerState: return '''contract.powers.«situation.powerVariable.name», "«situation.stateName»""'''
-          ContractState: return '''contract, "«situation.stateName»"'''
+          ObligationState: return '''contract.obligations.«situation.obligationVariable.name», "Obligation.«situation.stateName»"'''
+          PowerState: return '''contract.powers.«situation.powerVariable.name», "Power.«situation.stateName»""'''
+          ContractState: return '''contract, "Contract.«situation.stateName»"'''
         }
       }
     }
@@ -783,23 +786,23 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def void compileTransactionFile(IFileSystemAccess2 fsa, Model model) {
     val code = '''
-      import { Contract } from 'fabric-contract-api' 
-      import { «model.contractName» } from "./domain/contract/«model.contractName».js"
-      import { deserialize, serialize } from "./serializer.js"
-      import { Events } from «EVENT_CLASS_IMPORT_PATH»
-      import { InternalEvent, InternalEventSource, InternalEventType } from «EVENT_CLASS_IMPORT_PATH»
-      import { getEventMap, EventListeners } from "./events.js"
-      «««      «FOR asset : assets»
-«««        import { «asset.name» } from "./domain/assets/«asset.name»"
+      const { Contract } = require("fabric-contract-api") 
+      const { «model.contractName» } = require("./domain/contract/«model.contractName».js")
+      const { deserialize, serialize } = require("./serializer.js")
+      const { Events } = require(«EVENT_CLASS_IMPORT_PATH»)
+      const { InternalEvent, InternalEventSource, InternalEventType } = require(«EVENT_CLASS_IMPORT_PATH»)
+      const { getEventMap, EventListeners } = require("./events.js")
+«««      «FOR asset : assets»
+«««        import { «asset.name» } = require( "./domain/assets/«asset.name»")
 «««      «ENDFOR»
 «««      «FOR event : events»
-«««        import { «event.name» } from "./domain/events/«event.name»"
+«««        const { «event.name» } = require( "./domain/events/«event.name»")
 «««      «ENDFOR»
 «««      «FOR role : roles»
-«««        import { «role.name» } from "./domain/roles/«role.name»"
+«««        const { «role.name» } = require( "./domain/roles/«role.name»")
 «««      «ENDFOR»
 «««      «FOR enumeration : enumerations»
-«««        import { «enumeration.name» } from "./domain/types/«enumeration.name»"
+«««        const { «enumeration.name» } = require( "./domain/types/«enumeration.name»")
 «««      «ENDFOR»
       class HFContract extends Contract {
         
@@ -826,8 +829,10 @@ class SymboleoGenerator extends AbstractGenerator {
           
         «ENDFOR»
       }
+      
+      module.exports.contracts = [HFContract];
     '''
-    fsa.generateFile("./" + model.contractName + "/" + "transactions.js", code)
+    fsa.generateFile("./" + model.contractName + "/" + "index.js", code)
   }
 
   def List<String> compileViolationEventsTransactions(Model model) {
@@ -840,7 +845,7 @@ class SymboleoGenerator extends AbstractGenerator {
           if (contractState == null) {
             return {successful: false}
           }
-          const contract = deserialize(contractState)
+          const contract = deserialize(contractState.toString())
           this.initialize(contract)
         
           if (contract.isInEffect()) {
@@ -863,7 +868,8 @@ class SymboleoGenerator extends AbstractGenerator {
           if (contractState == null) {
             return {successful: false}
           }
-          const contract = deserialize(contractState)
+          const contract = deserialize(contractState.toString())
+          this.initialize(contract)
         
           if (contract.isInEffect()) {
             if (contract.survivingObligations.«obligation.name» != null && contract.survivingObligations.«obligation.name».violated()) {      
@@ -916,7 +922,7 @@ class SymboleoGenerator extends AbstractGenerator {
       if (contractState == null) {
         return {successful: false}
       }
-      const contract = deserialize(contractState)
+      const contract = deserialize(contractState.toString())
       this.initialize(contract)
     
       if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
@@ -940,7 +946,7 @@ class SymboleoGenerator extends AbstractGenerator {
       if (contractState == null) {
         return {successful: false}
       }
-      const contract = deserialize(contractState)
+      const contract = deserialize(contractState.toString())
       this.initialize(contract)
     
       if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
@@ -961,16 +967,19 @@ class SymboleoGenerator extends AbstractGenerator {
     val methods = new ArrayList<String>
     for (variable : eventVariables) {
       methods.add('''
-        async trigger_«variable.name»(ctx, contractId, event) {
+        async trigger_«variable.name»(ctx, args) {
+        	const inputs = JSON.parse(args);
+        	const contractId = inputs.contractId;
+        	const event = inputs.event;
           const contractState = await ctx.stub.getState(contractId)
           if (contractState == null) {
             return {successful: false}
           }
-          const contract = deserialize(contractState)
+          const contract = deserialize(contractState.toString())
           this.initialize(contract)
           if (contract.isInEffect()) {
             contract.«variable.name».happen(event)
-            Events.emitEvent(this, new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, contract.«variable.name»))
+            Events.emitEvent(contract, new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, contract.«variable.name»))
             await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
             return {successful: true}
           } else {
@@ -984,8 +993,9 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String compileInitMethod(Model model) {
     val code = '''
-      async init(ctx, «model.parameters.map[Parameter p | p.name].join(',')») {
-        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | p.name].join(',')»)
+      async init(ctx, args») {
+      	const inputs = JSON.parse(args);
+        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(',')»)
         this.initialize(contractInstance)
         if (contractInstance.activated()) {
           «FOR obligation : obligations»
@@ -1009,38 +1019,41 @@ class SymboleoGenerator extends AbstractGenerator {
     return code
   }
 
-  // TODO creditor and debotor param
   def void compileContract(IFileSystemAccess2 fsa, Model model) {
     val code = '''
       «FOR asset : assets»
-        import { «asset.name» } from "../assets/«asset.name».js"
+        const { «asset.name» } = require("../assets/«asset.name».js")
       «ENDFOR»
       «FOR event : events»
-        import { «event.name» } from "../events/«event.name».js"
+        const { «event.name» } = require("../events/«event.name».js")
       «ENDFOR»
       «FOR role : roles»
-        import { «role.name» } from "../roles/«role.name».js"
+        const { «role.name» } = require("../roles/«role.name».js")
       «ENDFOR»
       «FOR enumeration : enumerations»
-        import { «enumeration.name» } from "../types/«enumeration.name».js"
+        const { «enumeration.name» } = require("../types/«enumeration.name».js")
       «ENDFOR»
-      import { SymboleoContract } from «CONTRACT_CLASS_IMPORT_PATH»
-      import { Obligation } from «OBLIGATION_CLASS_IMPORT_PATH»
-      import { Power } from «POWER_CLASS_IMPORT_PATH»
-      import { Utils } from «UTILS_CLASS_IMPORT_PATH»
-      import { Str } from «UTILS_CLASS_IMPORT_PATH»
+      const { SymboleoContract } = require(«CONTRACT_CLASS_IMPORT_PATH»)
+      const { Obligation } = require(«OBLIGATION_CLASS_IMPORT_PATH»)
+      const { Power } = require(«POWER_CLASS_IMPORT_PATH»)
+      const { Utils } = require(«UTILS_CLASS_IMPORT_PATH»)
+      const { Str } = require(«UTILS_CLASS_IMPORT_PATH»)
       
-      export class «model.contractName» extends SymboleoContract {
+      class «model.contractName» extends SymboleoContract {
         constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
-          super()
+          super("«model.contractName»")
           this._name = "«model.contractName»"
           «FOR parameter : model.parameters»
             this.«parameter.name» = «parameter.name»
           «ENDFOR»
           
+          this.obligations = {};
+          this.survivingObligations = {};
+          this.powers = {};
+          
           «FOR variable : model.variables»
             «IF variable.type instanceof RegularType»
-              this.«variable.name» = new «variable.type.name»()
+              this.«variable.name» = new «variable.type.name»("«variable.name»")
               «FOR assignment: variable.attributes»
                 «IF assignment instanceof AssignVariable»
                   this.«variable.name».«assignment.name» = «generateDotExpressionString(assignment.value, 'this')»
@@ -1055,13 +1068,15 @@ class SymboleoGenerator extends AbstractGenerator {
             this.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
           «ENDFOR»
           «FOR obligation : survivingObligations»
-            this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
+            this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this, true)
           «ENDFOR»
           «FOR power : powers»
             this.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'this')», «generateDotExpressionString(power.debtor, 'this')», this)
           «ENDFOR»          
         }
       }
+      
+      module.exports.«model.contractName» = «model.contractName»
     '''
     fsa.generateFile("./" + model.contractName + "/domain/contract/" + model.contractName + ".js", code)
   }
@@ -1175,7 +1190,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def void generateEnumeration(IFileSystemAccess2 fsa, Model model, Enumeration enumeration) {
     val code = '''      
-      export const «enumeration.name» = {
+      module.exports.«enumeration.name» = {
         «FOR item : enumeration.enumerationItems»
           «item.name»: «enumeration.enumerationItems.indexOf(item)»,
         «ENDFOR»
@@ -1202,16 +1217,19 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Asset } from «ASSET_CLASS_IMPORT_PATH»;
+        const { Asset } = require(«ASSET_CLASS_IMPORT_PATH»);
         
-        export class «asset.name» extends Asset {
-          constructor(«asset.attributes.map[Attribute a | a.name].join(',')») {
+        class «asset.name» extends Asset {
+          constructor(_name,«asset.attributes.map[Attribute a | a.name].join(',')») {
             super()
+            this._name = _name
             «FOR attribute : asset.attributes»
               this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«asset.name» = «asset.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/assets/" + asset.name + ".js", code)
     } else if (asset.regularType !== null) {
@@ -1220,16 +1238,19 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(asset.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        const { «parentType.name» } = require("./«parentType.name».js");
         
-        export class «asset.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+        class «asset.name» extends «parentType.name» {
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
             super(«parentAttributes.map[Attribute a | a.name].join(',')»)
+            this._name = _name
             «FOR attribute : asset.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«asset.name» = «asset.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/assets/" + asset.name + ".js", code)
     }
@@ -1240,17 +1261,19 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Event } from «EVENT_CLASS_IMPORT_PATH»;
+        const { Event } = require(«EVENT_CLASS_IMPORT_PATH»);
         
-        export class «event.name» extends Event {
-          constructor(«event.attributes.map[Attribute a | a.name].join(',')») {
+        class «event.name» extends Event {
+          constructor(_name,«event.attributes.map[Attribute a | a.name].join(',')») {
             super()
-            this._name = "«event.name»"
+            this._name = _name
             «FOR attribute : event.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«event.name» = «event.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/events/" + event.name + ".js", code)
     } else if (event.regularType !== null) {
@@ -1259,17 +1282,19 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(event.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        const { «parentType.name» } = require("./«parentType.name».js");
         
-        export class «event.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+        class «event.name» extends «parentType.name» {
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
             super(«parentAttributes.map[Attribute a | a.name].join(',')»)
-            this._name = "«event.name»"
+            this._name = _name
             «FOR attribute : event.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«event.name» = «event.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/events/" + event.name + ".js", code)
     }
@@ -1280,16 +1305,19 @@ class SymboleoGenerator extends AbstractGenerator {
 
     if (isBase === true) {
       val code = '''
-        import { Role } from «ROLE_CLASS_IMPORT_PATH»;
+        const { Role } = require(«ROLE_CLASS_IMPORT_PATH»);
         
-        export class «role.name» extends Role {
-          constructor(«role.attributes.map[Attribute a | a.name].join(',')») {
+        class «role.name» extends Role {
+          constructor(_name,«role.attributes.map[Attribute a | a.name].join(',')») {
             super()
+            this._name = _name
             «FOR attribute : role.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«role.name» = «role.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/roles/" + role.name + ".js", code)
     } else if (role.regularType !== null) {
@@ -1298,16 +1326,19 @@ class SymboleoGenerator extends AbstractGenerator {
       val parentAttributes = new ArrayList<Attribute>(allAttributes)
       parentAttributes.removeAll(role.attributes)
       val code = '''
-        import { «parentType.name» } from "./«parentType.name».js";
+        const { «parentType.name» } = require("./«parentType.name».js");
         
-        export class «role.name» extends «parentType.name» {
-          constructor(«allAttributes.map[Attribute a | a.name].join(',')») {
+        class «role.name» extends «parentType.name» {
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
             super(«parentAttributes.map[Attribute a | a.name].join(',')»)
+            this._name = _name
             «FOR attribute : role.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
           }
         }
+        
+        module.exports.«role.name» = «role.name»
       '''
       fsa.generateFile("./" + model.contractName + "/domain/roles/" + role.name + ".js", code)
     }
