@@ -19,6 +19,7 @@ Please follow the instructions below.
   
 ![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/images/p2.png "Use as source folder")
 - Right click on the `src-gen` folder, select `Build path` > `Use as source folder`
+- If you are still seeing errors in the `SymboleoGenerator.xtend` file. Copy the code from [here](https://raw.githubusercontent.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/master/ca.uottawa.csmlab.symboleo/src/ca/uottawa/csmlab/symboleo/generator/SymboleoGenerator.xtend) and paste it in Eclipse in the `SymboleoGenerator.xtend` file.
 - To start the Symboloe IDE right click on the `ca.uottawa.csmlab.symboleo` project in the `Package Explorer`, then select `Run as` > `Eclipse aplication`
   
 ![alt text](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo-IDE/blob/master/images/p3.png "Run as Eclipse aplication")
