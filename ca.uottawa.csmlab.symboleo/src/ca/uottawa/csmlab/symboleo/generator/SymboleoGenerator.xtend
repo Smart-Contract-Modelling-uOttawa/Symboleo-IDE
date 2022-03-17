@@ -626,7 +626,7 @@ class SymboleoGenerator extends AbstractGenerator {
       module.exports.EventListeners = EventListeners
       module.exports.getEventMap = getEventMap
     '''
-
+		// TODO terminateContract logic
     fsa.generateFile("./" + model.contractName + "/" + "events.js", code)
   }
 
