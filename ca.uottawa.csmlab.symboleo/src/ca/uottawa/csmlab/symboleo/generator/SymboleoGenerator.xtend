@@ -993,7 +993,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String compileInitMethod(Model model) {
     val code = '''
-      async init(ctx, args») {
+      async init(ctx, args) {
       	const inputs = JSON.parse(args);
         const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(',')»)
         this.initialize(contractInstance)
