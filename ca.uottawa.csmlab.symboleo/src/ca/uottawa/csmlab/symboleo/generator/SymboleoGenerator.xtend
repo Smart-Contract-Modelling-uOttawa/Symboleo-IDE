@@ -304,7 +304,7 @@ class SymboleoGenerator extends AbstractGenerator {
         "dependencies": {
           "fabric-contract-api": "^2.2.2",
           "fabric-shim": "^2.2.2",
-          "symboleo-js-core": "^1.0.8"
+          "symboleo-js-core": "^1.0.9"
         },
         "devDependencies": {
           "chai": "^4.1.2",
@@ -410,7 +410,7 @@ class SymboleoGenerator extends AbstractGenerator {
       }
     
       for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
-        if (object[key].triggered === true) {
+        if (object[key]._triggered === true) {
           contract[key]._triggered = true
           contract[key]._timestamp = object[key].timestamp
         }
@@ -828,6 +828,34 @@ class SymboleoGenerator extends AbstractGenerator {
           «method»
           
         «ENDFOR»
+        
+        async getState(ctx, contractId) {
+        	const contractState = await ctx.stub.getState(contractId)
+        	if (contractState == null) {
+        	  return {successful: false}
+        	}
+        	const contract = deserialize(contractState.toString())
+        	this.initialize(contract)
+        	let output = `Contract state: ${contract.state}-${contract.activeState}\r\n`
+        	output += 'Obligations:\r\n'
+        	for (const obligationKey of Object.keys(contract.obligations)) {
+            output += `  ${obligationKey}: ${contract.obligations[obligationKey].state}-${contract.obligations[obligationKey].activeState}\r\n`
+          }
+          output += 'Powers:\r\n'
+          for (const powerKey of Object.keys(contract.powers)) {
+            output += `  ${powerKey}: ${contract.powers[powerKey].state}-${contract.powers[powerKey].activeState}\r\n`
+          }
+          output += 'Surviving Obligations:\r\n'
+          for (const obligationKey of Object.keys(contract.survivingObligations)) {
+            output += `  ${obligationKey}: ${contract.survivingObligations[obligationKey].state}-${contract.survivingObligations[obligationKey].activeState}\r\n`
+          }
+          output += 'Events:\r\n'
+          «FOR event : eventVariables»
+            output += `  Has "«event.name»" event happened? ${contract.«event.name»._triggered}\r\n`
+          «ENDFOR»
+          
+          return output
+        }
       }
       
       module.exports.contracts = [HFContract];
