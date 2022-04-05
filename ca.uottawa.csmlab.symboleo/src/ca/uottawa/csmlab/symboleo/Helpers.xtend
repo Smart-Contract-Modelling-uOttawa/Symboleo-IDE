@@ -42,6 +42,10 @@ import ca.uottawa.csmlab.symboleo.symboleo.Alias
 import ca.uottawa.csmlab.symboleo.symboleo.Enumeration
 import org.eclipse.emf.ecore.EReference
 import ca.uottawa.csmlab.symboleo.symboleo.SymboleoPackage
+import ca.uottawa.csmlab.symboleo.scoping.MyAttributeImpl
+import ca.uottawa.csmlab.symboleo.scoping.MyBaseTypeImpl
+import ca.uottawa.csmlab.symboleo.symboleo.impl.RegularTypeImpl
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDate
 
 class Helpers {
   
@@ -52,6 +56,12 @@ class Helpers {
     while(type.getRegularType() !== null) {
       type = type.getRegularType();
       attributes.addAll(type.getAttributes());
+    }
+    if (type.ontologyType.name.equalsIgnoreCase("Event")) {
+      val rti = type as RegularTypeImpl;
+      val tsAttribute = 
+        new MyAttributeImpl("_timestamp", new MyBaseTypeImpl("Date"), rti);
+      attributes.add(tsAttribute);
     }
     return attributes;
   }
@@ -297,6 +307,8 @@ class Helpers {
       AtomicExpressionDouble,
       AtomicExpressionInt:
         return new ResolveExpressionResult("Number")
+      AtomicExpressionDate:
+        return new ResolveExpressionResult("Date")
       // enums
       AtomicExpressionEnum:
         return new ResolveExpressionResult(exp.enumeration.name)

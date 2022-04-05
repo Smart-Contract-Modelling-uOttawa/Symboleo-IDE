@@ -223,7 +223,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
                   + " shall not be initiated.",
               res.get(), SymboleoPackage.Literals.ASSIGNMENT__NAME);
         }
-      } else if (!isInitiated) {
+      } else if (!isInitiated && !atr.getName().equalsIgnoreCase("_timestamp")) {
         // all other attributes should be initiated
         error(
             "Attribute '" + atr.getName() + "' is not initiated in variable '"

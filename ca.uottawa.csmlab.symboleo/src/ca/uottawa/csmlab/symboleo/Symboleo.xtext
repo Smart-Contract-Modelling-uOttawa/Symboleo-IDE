@@ -30,13 +30,10 @@ EnumItem:
 	name=ID;
 
 // TODO not extend itself, prevent cycles
-// TODO check attribute names to be unique, (parent classes)
-// TODO can only extend regular types
 RegularType:
 	name=ID ('isA' | 'isAn') ontologyType=OntologyType ('with' (attributes+=Attribute ',')* (attributes+=Attribute))? |
 	name=ID ('isA' | 'isAn') regularType=[RegularType] ('with' (attributes+=Attribute ',')* (attributes+=Attribute))?;
 
-// TODO check attribute modifier is only used for type event 
 Attribute:
 	attributeModifier=AttributeModifier? name=ID ':' baseType=BaseType |
 	attributeModifier=AttributeModifier? name=ID ':' domainType=[DomainType];
@@ -57,13 +54,9 @@ ParameterType:
 	baseType=BaseType |
 	domainType=[DomainType];
 
-// TODO traverse in correct order
 Variable:
 	name=ID ':' type=[RegularType] ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
 
-// TODO name should be from the attributes of the used type
-// TODO check assigned type is correct
-// TODO should be declared before use
 Assignment:
 	{AssignVariable} name=ID ':=' value=VariableDotExpression |
 	AssignmentB;
@@ -79,6 +72,9 @@ AssignmentB returns AssignExpression:
 
 Double returns ecore::EDouble:
 	INT '.' INT;
+
+Date returns ecore::EDate:
+  'Date' '(' STRING ')';
 
 Expression: Or;
 
@@ -112,6 +108,7 @@ AtomicExpression returns Expression:
 	{AtomicExpressionFalse} value="false" |
 	{AtomicExpressionDouble} value=Double |
 	{AtomicExpressionInt} value=INT |
+	{AtomicExpressionDate} value= Date |
 	{AtomicExpressionEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{AtomicExpressionString} value=STRING |
 	{AtomicExpressionParameter} value=VariableDotExpression
@@ -135,7 +132,6 @@ DateFunction returns FunctionCall:
 	{ThreeArgDateFunction} name='Date.add' '(' arg1=Expression ',' value=Expression ',' timeUnit=TimeUnit  ')' 
 ;
 
-// TODO check that creditor and debtor are valid references, are type of role
 Obligation:
 	name=ID ':' (trigger=Proposition '->')? ('O' | 'Obligation') '(' debtor=VariableDotExpression ',' creditor=VariableDotExpression ',' antecedent=Proposition ',' consequent=Proposition ')';
 
@@ -178,10 +174,10 @@ PAtomicExpression returns Proposition:
 	{PAtomPredicateFalseLiteral} value='false' |
 	{PAtomDoubleLiteral} value=Double |
 	{PAtomIntLiteral} value=INT |
-	{PAtomStringLiteral} value=STRING
+	{PAtomStringLiteral} value=STRING |
+	{PAtomDateLiteral} value= Date
 	;
 
-// TODO check cannotBeAssigned arg type
 PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |

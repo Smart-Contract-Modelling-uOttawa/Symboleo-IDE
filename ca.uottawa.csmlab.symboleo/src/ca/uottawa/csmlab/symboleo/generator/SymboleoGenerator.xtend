@@ -102,6 +102,9 @@ import ca.uottawa.csmlab.symboleo.Helpers
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionSHappensBefore
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionWHappensBefore
 import ca.uottawa.csmlab.symboleo.symboleo.OntologyType
+import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDate
+import ca.uottawa.csmlab.symboleo.symboleo.PAtomDateLiteral
+import java.time.format.DateTimeFormatter
 
 //
 /**
@@ -110,10 +113,6 @@ import ca.uottawa.csmlab.symboleo.symboleo.OntologyType
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class SymboleoGenerator extends AbstractGenerator {
-  
-  // todo timvalue expression
-  // date literal
-  // point function Date.add
 
   val ASSET_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
   val EVENT_CLASS_IMPORT_PATH = "\"symboleo-js-core\""
@@ -626,7 +625,7 @@ class SymboleoGenerator extends AbstractGenerator {
       module.exports.EventListeners = EventListeners
       module.exports.getEventMap = getEventMap
     '''
-		// TODO terminateContract logic
+
     fsa.generateFile("./" + model.contractName + "/" + "events.js", code)
   }
 
@@ -728,6 +727,8 @@ class SymboleoGenerator extends AbstractGenerator {
         return proposition.value.toString
       PAtomIntLiteral:
         return proposition.value.toString
+      PAtomDateLiteral:
+        return '''(new Date("«proposition.value.toInstant.toString»"))'''
       PAtomStringLiteral:
         return proposition.value
     }
@@ -990,7 +991,6 @@ class SymboleoGenerator extends AbstractGenerator {
     }'''
   }
 
-  // todo ENV modifier
   def List<String> compileEventTriggerMethods(Model model) {
     val methods = new ArrayList<String>
     for (variable : eventVariables) {
@@ -1149,6 +1149,8 @@ class SymboleoGenerator extends AbstractGenerator {
         return argExpression.value.toString()
       AtomicExpressionInt:
         return argExpression.value.toString()
+      AtomicExpressionDate:
+        return '''(new Date("«argExpression.value.toInstant.toString»"))'''
       AtomicExpressionEnum:
         return argExpression.enumeration + "." + argExpression.enumItem
       AtomicExpressionString:
