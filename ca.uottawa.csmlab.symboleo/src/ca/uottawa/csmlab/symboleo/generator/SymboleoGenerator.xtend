@@ -382,10 +382,10 @@ class SymboleoGenerator extends AbstractGenerator {
           obligation), '''EventListeners.fulfillSurvivingObligation_«obligation.name»'''))
     }
     // contract termination
-    for (obligation : allObligations) {
-      arrays.
-        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
-    }
+//    for (obligation : allObligations) {
+//      arrays.
+//        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
+//    }
 
     return '''
       function getEventMap(contract) {
@@ -563,10 +563,12 @@ class SymboleoGenerator extends AbstractGenerator {
           },
         «ENDFOR»
         «FOR power : powerTriggerEvents.keySet»
-          createPower_«power.name»(contract) { 
+          createPower_«power.name»(contract) {
+            const effects = { powerCreated: false } 
             if («generatePropositionString(power.trigger)») {
               if (contract.powers.«power.name» == null || contract.powers.«power.name».isFinished()){
                 contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
+                effects.powerCreated = true
                 if («generatePropositionString(power.antecedent)») {
                   contract.powers.«power.name».trigerredUnconditional()
                 } else {
@@ -574,6 +576,7 @@ class SymboleoGenerator extends AbstractGenerator {
                 }
               }
             }
+            return effects
           },
         «ENDFOR»
         «FOR obligation : obligationAntecedentEvents.keySet»
@@ -622,15 +625,19 @@ class SymboleoGenerator extends AbstractGenerator {
             if (contract.obligations[oblKey].isActive()) {
               return;
             }
-          }
+          }            
+          contract.fulfilledActiveObligations()
+        }
+        
+        unsuccessfullyTerminateContract(contract) {
           for (let index in contract.obligations) { 
             contract.obligations[index].terminated()
           }
           for (let index in contract.powers) {
             contract.powers[index].terminated()
           }            
-          contract.fulfilledActiveObligations()
-        }       
+          contract.terminated()
+        }     
       }
       
       «compileEventsMap()»
@@ -793,7 +800,7 @@ class SymboleoGenerator extends AbstractGenerator {
       PAtomIntLiteral:
         return proposition.value.toString
       PAtomDateLiteral:
-        return '''(new Date("«proposition.value.toInstant.toString»"))'''
+        return '''(new Date("«proposition.value.toInstant.toString»").toISOString())'''
       PAtomStringLiteral:
         return proposition.value
     }
@@ -1300,7 +1307,7 @@ class SymboleoGenerator extends AbstractGenerator {
       AtomicExpressionInt:
         return argExpression.value.toString()
       AtomicExpressionDate:
-        return '''(new Date("«argExpression.value.toInstant.toString»"))'''
+        return '''(new Date("«argExpression.value.toInstant.toString»").toISOString())'''
       AtomicExpressionEnum:
         return argExpression.enumeration + "." + argExpression.enumItem
       AtomicExpressionString:
