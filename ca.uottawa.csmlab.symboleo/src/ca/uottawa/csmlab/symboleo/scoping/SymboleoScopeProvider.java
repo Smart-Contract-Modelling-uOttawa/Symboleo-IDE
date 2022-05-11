@@ -16,13 +16,14 @@ import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
 
 import ca.uottawa.csmlab.symboleo.Helpers;
-import ca.uottawa.csmlab.symboleo.symboleo.AssignVariable;
-import ca.uottawa.csmlab.symboleo.symboleo.Assignment;
+//import ca.uottawa.csmlab.symboleo.symboleo.AssignVariable;
+//import ca.uottawa.csmlab.symboleo.symboleo.Assignment;
 import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionEnum;
 import ca.uottawa.csmlab.symboleo.symboleo.Attribute;
 import ca.uottawa.csmlab.symboleo.symboleo.DomainType;
 import ca.uottawa.csmlab.symboleo.symboleo.Enumeration;
 import ca.uottawa.csmlab.symboleo.symboleo.Model;
+import ca.uottawa.csmlab.symboleo.symboleo.ObligationEvent;
 import ca.uottawa.csmlab.symboleo.symboleo.OntologyType;
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomEnum;
 import ca.uottawa.csmlab.symboleo.symboleo.Parameter;
@@ -44,7 +45,9 @@ public class SymboleoScopeProvider extends AbstractSymboleoScopeProvider {
 
   @Override
   public IScope getScope(EObject context, EReference reference) {
-    // this function is called for every type of objects, we separate the code by comparing class types 
+    // we separate the code by comparing the context and its reference values  
+    // the root object 
+    Model root = (Model) EcoreUtil2.getRootContainer(context);
     if (context instanceof VariableDotExpression) {
       // inside this condition we handle the auto-complete functionality for the dot operator
       
@@ -56,8 +59,6 @@ public class SymboleoScopeProvider extends AbstractSymboleoScopeProvider {
       // List<Element> candidates = EcoreUtil2.getAllContentsOfType(rootElement, Element.class);
       // Create IEObjectDescriptions and puts them into an IScope instance
 
-      // the root object 
-      Model root = (Model) EcoreUtil2.getRootContainer(context);
       VariableDotExpression e = (VariableDotExpression) context;
       Ref head = e.getRef();
       if (head instanceof VariableDotExpression) {
@@ -107,7 +108,7 @@ public class SymboleoScopeProvider extends AbstractSymboleoScopeProvider {
       PAtomEnum enumeration = (PAtomEnum) context;
       return Scopes.scopeFor(enumeration.getEnumeration().getEnumerationItems());
     } else if (context instanceof AtomicExpressionEnum && reference == SymboleoPackage.Literals.ATOMIC_EXPRESSION_ENUM__ENUM_ITEM) {
-      // if the object is an enum(AtomicExpressionEnum is used for refs outside propostions) we return the list of enum values
+      // if the object is an enum(AtomicExpressionEnum is used for refs outside propositions) we return the list of enum values
       AtomicExpressionEnum enumeration = (AtomicExpressionEnum) context;
       return Scopes.scopeFor(enumeration.getEnumeration().getEnumerationItems());
     }

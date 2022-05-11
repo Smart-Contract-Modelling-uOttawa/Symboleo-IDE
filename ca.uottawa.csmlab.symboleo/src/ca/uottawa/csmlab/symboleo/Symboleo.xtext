@@ -57,9 +57,9 @@ ParameterType:
 Variable:
 	name=ID ':' type=[RegularType] ('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
 
-Assignment:
-	{AssignVariable} name=ID ':=' value=VariableDotExpression |
-	AssignmentB;
+//Assignment:
+//	{AssignVariable} name=ID ':=' value=VariableDotExpression |
+//	AssignmentB;
 
 VariableDotExpression returns Ref:
 	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
@@ -67,7 +67,7 @@ VariableDotExpression returns Ref:
 VariableRef returns Ref:
 	{VariableRef} variable=ID;
 
-AssignmentB returns AssignExpression:
+Assignment:
 	{AssignExpression} name=ID ':=' value=Expression;
 
 Double returns ecore::EDouble:
@@ -139,10 +139,10 @@ Power:
 	name=ID ':' (trigger=Proposition '->')? ('P' | 'Power') '(' creditor=VariableDotExpression ',' debtor=VariableDotExpression ',' antecedent=Proposition ',' consequent=PowerFunction ')';
 	
 PowerFunction returns PowerFunction:
-	{PFObligationSuspended} action = 'Suspended' '(' norm = [Obligation] ')' | 
-	{PFObligationResumed} action = 'Resumed' '(' norm = [Obligation] ')' | 
-	{PFObligationDischarged} action = 'Discharged' '(' norm = [Obligation] ')' |
-	{PFObligationTerminated} action = 'Terminated' '(' norm = [Obligation] ')' |
+	{PFObligationSuspended} action = 'Suspended' '(' 'obligations.' norm = [Obligation] ')' | 
+	{PFObligationResumed} action = 'Resumed' '(' 'obligations.' norm = [Obligation] ')' | 
+	{PFObligationDischarged} action = 'Discharged' '(' 'obligations.' norm = [Obligation] ')' |
+	{PFObligationTerminated} action = 'Terminated' '(' 'obligations.' norm = [Obligation] ')' |
 	//{PFPowerSuspended} action = 'Suspended_' '(' norm = [Power] ')' | 
 	//{PFPowerResumed} action = 'Resumed_' '(' norm = [Power] ')' | 
 	//{PFPowerTerminated} action = 'Terminated_' '(' norm = [Power] ')' |
@@ -166,8 +166,9 @@ PComparison returns Proposition:
 
 PAtomicExpression returns Proposition:
 	{PAtomRecursive} '(' inner=Proposition ')' |
-	{NegatedPAtom} 'not' negated=PAtomicExpression | // TODO does not work with happens* functions
+	{NegatedPAtom} 'not' negated=PAtomicExpression |
 	{PAtomPredicate} predicateFunction=PredicateFunction |
+	{PAtomFunction} function=OtherFunction |
   {PAtomEnum} enumeration=[Enumeration]"("enumItem=[EnumItem]")" |
 	{PAtomVariable} variable=VariableDotExpression |
 	{PAtomPredicateTrueLiteral} value='true' |
@@ -182,32 +183,36 @@ PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')' |
-	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
-	{PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
-	{PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
-	{PredicateFunctionCannotBeAssigned} name='CannotBeAssigned' '(' arg1=ID ')'
+	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'
+//	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
 	;
 
+OtherFunction:
+  {PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
+  {PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
+  {PredicateFunctionCannotBeAssigned} name='CannotBeAssigned' '(' arg1=ID ')'
+  ;
+  
 Event:
 	VariableEvent |
 	ObligationEvent |
 	ContractEvent |
 	PowerEvent;
 	
+
+	
 VariableEvent returns Event:
 	{VariableEvent} variable=VariableDotExpression
 ;
 
 PowerEvent returns Event:
-	{PowerEvent} eventName=PowerEventName '(' powerVariable=[Power] ')';
+	{PowerEvent} eventName=PowerEventName '(' 'powers.' powerVariable=[Power] ')';
 
 PowerEventName:
 	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Exerted' | 'Expired' | 'Terminated';
 
 ObligationEvent returns Event:
-	{ObligationEvent} eventName=ObligationEventName '(' obligationVariable=[Obligation] ')';
+	{ObligationEvent} eventName=ObligationEventName '(' 'obligations.' obligationVariable=[Obligation] ')';
 
 ObligationEventName:
 	'Triggered' | 'Activated' | 'Suspended' | 'Resumed' | 'Discharged' | 'Expired' | 'Fulfilled' | 'Violated' | 'Terminated';
@@ -259,13 +264,13 @@ Situation:
 	PowerState;
 
 PowerState:
-	stateName=PowerStateName '(' powerVariable=[Power] ')';
+	stateName=PowerStateName '(' 'powers.' powerVariable=[Power] ')';
 
 PowerStateName:
 	'Create' | 'UnsuccessfulTermination' | 'Active' | 'InEffect' | 'Suspension' | 'SuccessfulTermination';
 
 ObligationState:
-	stateName=ObligationStateName '(' obligationVariable=[Obligation] ')';
+	stateName=ObligationStateName '(' 'obligations.' obligationVariable=[Obligation] ')';
 
 ObligationStateName:
 	'Create' | 'Discharge' | 'Active' | 'InEffect' | 'Suspension' | 'Violation' | 'Fulfillment' | 'UnsuccessfulTermination';

@@ -48,7 +48,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.impl.RegularTypeImpl
 import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDate
 
 class Helpers {
-  
+
   def static List<Attribute> getAttributesOfRegularType(RegularType argType) {
     val attributes = new ArrayList<Attribute>;
     var type = argType;
@@ -57,10 +57,10 @@ class Helpers {
       type = type.getRegularType();
       attributes.addAll(type.getAttributes());
     }
-    if (type.ontologyType.name.equalsIgnoreCase("Event")) {
+    if(type.ontologyType.name.equalsIgnoreCase("Event")) {
       val rti = type as RegularTypeImpl;
-      val tsAttribute = 
-        new MyAttributeImpl("_timestamp", new MyBaseTypeImpl("Date"), rti);
+      val tsAttribute = new MyAttributeImpl("_timestamp",
+        new MyBaseTypeImpl("Date"), rti);
       attributes.add(tsAttribute);
     }
     return attributes;
@@ -371,6 +371,44 @@ class Helpers {
       }
     }
     return null;
+  }
+
+  def static Boolean isDotExpressionTypeOfEvent(Ref argRef,
+    List<Variable> variables, List<Parameter> parameters) {
+    val t = getDotExpressionType(argRef, variables, parameters);
+    switch (t) {
+      ParameterType: {
+        if(t.domainType !== null) {
+          return getBaseType(t.domainType).getOntologyType().name.equalsIgnoreCase("Event")
+        } else {
+          return false
+        }
+      }
+      DomainType:
+        return getBaseType(t).getOntologyType().name.equalsIgnoreCase("Event")
+      BaseType:
+        return false
+      default:
+        return false
+    }
+  }
+
+  def static String getDotExpressionStringType(Ref argRef,
+    List<Variable> variables, List<Parameter> parameters) {
+    val t = getDotExpressionType(argRef, variables, parameters);
+    switch (t) {
+      ParameterType: {
+        if(t.domainType !== null) {
+          return t.domainType.name;
+        } else if(t.baseType !== null) {
+          return t.baseType.name
+        }
+      }
+      DomainType:
+        t.name
+      BaseType:
+        return t.name
+    }
   }
 }
 
