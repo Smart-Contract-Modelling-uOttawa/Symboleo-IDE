@@ -384,7 +384,7 @@ class SymboleoGenerator extends AbstractGenerator {
     // contract termination
 //    for (obligation : allObligations) {
 //      arrays.
-//        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.terminateContract],''')
+//        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.successfullyTerminateContract],''')
 //    }
 
     return '''
@@ -437,6 +437,8 @@ class SymboleoGenerator extends AbstractGenerator {
         const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract)
         obligation.state = object.obligations.«obligation.name».state
         obligation.activeState = object.obligations.«obligation.name».activeState
+        obligation._createdPowerNames = object.obligations.«obligation.name»._createdPowerNames
+        obligation._suspendedByContractSuspension = object.obligations.«obligation.name»._suspendedByContractSuspension
         for (const eventType of Object.keys(InternalEventType.obligation)) {
           if (object.obligations.«obligation.name»._events[eventType] != null) {
             const eventObject = new Event()
@@ -454,6 +456,8 @@ class SymboleoGenerator extends AbstractGenerator {
         const obligation = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, "contract")», «generateDotExpressionString(obligation.debtor, "contract")», contract, true)
         obligation.state = object.survivingObligations.«obligation.name».state
         obligation.activeState = object.survivingObligations.«obligation.name».activeState
+        obligation._createdPowerNames = object.survivingObligations.«obligation.name»._createdPowerNames
+        obligation._suspendedByContractSuspension = object.survivingObligations.«obligation.name»._suspendedByContractSuspension
         for (const eventType of Object.keys(InternalEventType.obligation)) {
           if (object.survivingObligations.«obligation.name»._events[eventType] != null) {
             const eventObject = new Event()
@@ -569,6 +573,7 @@ class SymboleoGenerator extends AbstractGenerator {
               if (contract.powers.«power.name» == null || contract.powers.«power.name».isFinished()){
                 contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
                 effects.powerCreated = true
+                effects.powerName = '«power.name»'
                 if («generatePropositionString(power.antecedent)») {
                   contract.powers.«power.name».trigerredUnconditional()
                 } else {
@@ -620,22 +625,28 @@ class SymboleoGenerator extends AbstractGenerator {
             }
           },
         «ENDFOR»
-        terminateContract(contract) {
+        successfullyTerminateContract(contract) {
           for (const oblKey of Object.keys(contract.obligations)) {
             if (contract.obligations[oblKey].isActive()) {
               return;
             }
-          }            
+            if (contract.obligations[oblKey].isViolated() && Array.isArray(contract.obligations[oblKey]._createdPowerNames)) {
+              for (const pKey of contract.obligations[oblKey]._createdPowerNames) {
+                if (!contract.powers[pKey].isSuccessfulTermination()) {
+                  return;
+                }
+              }
+            }
+          }
           contract.fulfilledActiveObligations()
-        }
-        
+        },
         unsuccessfullyTerminateContract(contract) {
           for (let index in contract.obligations) { 
-            contract.obligations[index].terminated()
+            contract.obligations[index].terminated({emitEvent: false})
           }
           for (let index in contract.powers) {
             contract.powers[index].terminated()
-          }            
+          }
           contract.terminated()
         }     
       }
@@ -970,7 +981,7 @@ class SymboleoGenerator extends AbstractGenerator {
           this.initialize(contract)
         
           if (contract.isInEffect()) {
-            if (contract.obligation.«obligation.name» != null && contract.obligation.«obligation.name».violated()) {      
+            if (contract.obligations.«obligation.name» != null && contract.obligations.«obligation.name».violated()) {      
               await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
               return {successful: true}
             } else {
@@ -1047,7 +1058,7 @@ class SymboleoGenerator extends AbstractGenerator {
       this.initialize(contract)
     
       if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
-        const obligation = contractState.«isSurvivingObligation(obligationName) ? "survivingObligations" : "obligations"».«obligationName»
+        const obligation = contract.«isSurvivingObligation(obligationName) ? "survivingObligations" : "obligations"».«obligationName»
         if (obligation != null && obligation.«stateMethod»() && contract.powers.«powerName».exerted()) {
           await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
           return {successful: true}
@@ -1081,7 +1092,7 @@ class SymboleoGenerator extends AbstractGenerator {
             obligation.resumed()
           }
           «ELSEIF stateMethod.equals("terminated")»
-          obligation.terminated()
+          obligation.terminated({emitEvent: false})
           «ENDIF»
         }
         for (let index in contract.survivingObligations) {
