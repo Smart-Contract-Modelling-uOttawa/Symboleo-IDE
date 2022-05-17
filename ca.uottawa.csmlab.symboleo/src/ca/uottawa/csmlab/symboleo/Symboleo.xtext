@@ -183,6 +183,7 @@ PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'
 //	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
 	;

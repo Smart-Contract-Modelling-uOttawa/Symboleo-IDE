@@ -98,6 +98,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.PointAtomContractEvent
 import ca.uottawa.csmlab.symboleo.symboleo.PointAtomPowerEvent
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionWHappensBefore
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionSHappensBefore
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionWHappensBeforeEvent
 
 //
 /**
@@ -107,2751 +108,2742 @@ import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionSHappensBefore
  */
  
 enum predicateType{
-		HAPPENS, WHAPPENSBEFORE, SHAPPENSBEFORE, HAPPENSAFTER, HAPPENSWITHIN
-	}
-	
+    HAPPENS, WHAPPENSBEFORE, SHAPPENSBEFORE, HAPPENSAFTER, HAPPENSWITHIN
+  }
+  
 enum timeUnit {
-		SECOND, MINUTE, HOUR, DAY, MONTH, YEAR
-	}
+    SECOND, MINUTE, HOUR, DAY, MONTH, YEAR
+  }
  
 class Tpoint {
-	enum Type {VARIABLE, EVENT}
-	public Integer time1;
-	public timeUnit unit;
-	public String time;
-	public Type type;
-	public String event;
-	
-	new(PointExpression point) {
-		if(point instanceof PointFunction) {
-			val pv = point.value
-			val pu = point.timeUnit;
-			if(pv instanceof TimevalueInt) {
-				this.time1 = pv.value;	
-				switch(pu) {
-					case 'seconds' : {this.unit = timeUnit.SECOND;}
-					case 'minutes' : {this.unit = timeUnit.MINUTE;}
-					case 'hours' : {this.unit = timeUnit.HOUR;}
-					case 'days' : {this.unit = timeUnit.DAY;}
-					case 'weeks' : {this.unit = timeUnit.MONTH;}
-					case 'years' : {this.unit = timeUnit.YEAR;}	
-					default : {this.unit = timeUnit.DAY;}
-					}
-				}		
-			}
-		else {
-			if(point instanceof PointAtomParameterDotExpression) {				
-				this.event = SymboleoPCGenerator.generateDotExpressionString(point.variable, null)
-				type = Type.EVENT
-			}
-			/*if(point instanceof PointAtomObligationEvent) {
-				var po = point.obligationEvent
-				if(po instanceof ObligationEvent) {
-					this.time = po.obligationVariable.name + ".state = (" + SymboleoPCGenerator.eventToSituation(po.eventName.toLowerCase) + ")"
-				}
-				type = Type.EVENT
-			}	*/		
-		}	
-	}
+  enum Type {VARIABLE, EVENT}
+  public Integer time1;
+  public timeUnit unit;
+  public String time;
+  public Type type;
+  public String event;
+  
+  new(PointExpression point) {
+    if(point instanceof PointFunction) {
+      val pv = point.value
+      val pu = point.timeUnit;
+      if(pv instanceof TimevalueInt) {
+        this.time1 = pv.value;  
+        switch(pu) {
+          case 'seconds' : {this.unit = timeUnit.SECOND;}
+          case 'minutes' : {this.unit = timeUnit.MINUTE;}
+          case 'hours' : {this.unit = timeUnit.HOUR;}
+          case 'days' : {this.unit = timeUnit.DAY;}
+          case 'weeks' : {this.unit = timeUnit.MONTH;}
+          case 'years' : {this.unit = timeUnit.YEAR;} 
+          default : {this.unit = timeUnit.DAY;}
+          }
+        }   
+      }
+    else {
+      if(point instanceof PointAtomParameterDotExpression) {        
+        this.event = SymboleoPCGenerator.generateDotExpressionString(point.variable, null)
+        type = Type.EVENT
+      }
+      /*if(point instanceof PointAtomObligationEvent) {
+        var po = point.obligationEvent
+        if(po instanceof ObligationEvent) {
+          this.time = po.obligationVariable.name + ".state = (" + SymboleoPCGenerator.eventToSituation(po.eventName.toLowerCase) + ")"
+        }
+        type = Type.EVENT
+      } */    
+    } 
+  }
 }
 
 class DeclarationVariable {
-	public String name
-	public String starter
-	public String type
-	public ArrayList<Pair<String, String>> parameters
-	
-	new(String name, String starter, String type, ArrayList<Pair<String, String>> parameters) {
-		this.name = name
-		this.starter = starter
-		this.type = type
-		this.parameters = parameters
-	}
+  public String name
+  public String starter
+  public String type
+  public ArrayList<Pair<String, String>> parameters
+  
+  new(String name, String starter, String type, ArrayList<Pair<String, String>> parameters) {
+    this.name = name
+    this.starter = starter
+    this.type = type
+    this.parameters = parameters
+  }
 }
 
 class SymboleoPredicate {
-	public predicateType predicate
-	public String event
-	public Tpoint time1
-	public Tpoint time2
-	
-	new(predicateType predicate, String event) {
-		this.predicate = predicate;
-		this.event = event
-	}
-	
-	new(predicateType predicate, String event, PointExpression point) {
-		this.predicate = predicate
-		this.event = event
-		this.time1 = new Tpoint(point)
-	}
-	
-	new(predicateType predicate, String event, PointExpression point1, PointExpression point2) {
-		this.predicate = predicate;
-		this.event = event
-		this.time1 = new Tpoint(point1);
-		this.time2 = new Tpoint(point2);
-	}
+  public predicateType predicate
+  public String event
+  public Tpoint time1
+  public Tpoint time2
+  
+  new(predicateType predicate, String event) {
+    this.predicate = predicate;
+    this.event = event
+  }
+  
+  new(predicateType predicate, String event, PointExpression point) {
+    this.predicate = predicate
+    this.event = event
+    this.time1 = new Tpoint(point)
+  }
+  
+  new(predicateType predicate, String event, PointExpression point1, PointExpression point2) {
+    this.predicate = predicate;
+    this.event = event
+    this.time1 = new Tpoint(point1);
+    this.time2 = new Tpoint(point2);
+  }
 } 
 
 class SymboleoPCGenerator {
-	enum propositionType{
-		TRIGGER, ANTECEDENT, CONSEQUENT
-	}
-	enum normType{
-		OBLIGATION, POWER
-	}
-	
-	val assets = new ArrayList<RegularType>
-	val events = new ArrayList<RegularType>
-	val roles = new ArrayList<RegularType>
-	val roleInstances = new HashMap<String, Pair<String, String>>
-	val enumerations = new ArrayList<Enumeration>
-	val parameters = new ArrayList<Parameter>
-	val obligations = new ArrayList<Obligation>
-	val powers = new ArrayList<Power>
-	val constraints = new ArrayList<Proposition>
-	
-	val predicates = new ArrayList<SymboleoPredicate>
-	
-	val eventVariables = new ArrayList<Variable>
-	val roleVariables = new ArrayList<Variable>
-		
-	val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>	
-	val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
-	
-	val obligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	val obligationConsequentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	val powerAntecedentEvents = new HashMap<Power, List<PAtomPredicate>>
-	
-	val constraintEvents = new ArrayList<List<PAtomPredicate>>
-	
-	val pcSurvivingObligations = new ArrayList<String>
-	val pcVariables = new ArrayList<DeclarationVariable>
-	val pcSituations = new ArrayList<String>
-	val pcRoles = new ArrayList<String>
-	val pcAssets = new ArrayList<String>
-	val pcDomEvents = new ArrayList<String>
-	val pcEnumerations = new ArrayList<String>
-	val pcParameters =  new ArrayList<String>
-	val pcConstraints = new ArrayList<String>
-	val pcAssignProhibitedNorms = new ArrayList<String>
-	
-	def void parse (Model model) {
-		parameters.addAll(model.parameters)
-		
-		// extract assets, events, roles and enumerations
-		for (domainType : model.domainTypes) {
-			if (domainType instanceof RegularType) {
-				var RegularType base = getBaseType(domainType)
-				if (base !== null) {
-					switch base.ontologyType.name {
-						case 'Asset': assets.add(domainType as RegularType)
-						case 'Event': events.add(domainType as RegularType)
-						case 'Role': roles.add(domainType as RegularType)
-					}
-				}
-			} else if (domainType instanceof Enumeration) {
-				enumerations.add(domainType as Enumeration)
-			}
-		}
-		
-		// extract contract parameters and exclude roles
-		for (param : parameters) {		
-			if (param.type.domainType instanceof RegularTypeImpl) {
-				var DomainType domainType = param.type.domainType
-				var RegularType base = getBaseType(domainType)
-				if (base !== null) {
-					if (base.ontologyType.name == 'Role') {
-					}
-					else {
-						pcParameters.add(param.name)
-					}
-				}
-			}
-			else{
-				pcParameters.add(param.name)
-			}
-		}
+  enum propositionType{
+    TRIGGER, ANTECEDENT, CONSEQUENT
+  }
+  enum normType{
+    OBLIGATION, POWER
+  }
+  
+  val assets = new ArrayList<RegularType>
+  val events = new ArrayList<RegularType>
+  val roles = new ArrayList<RegularType>
+  val roleInstances = new HashMap<String, Pair<String, String>>
+  val enumerations = new ArrayList<Enumeration>
+  val parameters = new ArrayList<Parameter>
+  val obligations = new ArrayList<Obligation>
+  val powers = new ArrayList<Power>
+  val constraints = new ArrayList<Proposition>
+  
+  val predicates = new ArrayList<SymboleoPredicate>
+  
+  val eventVariables = new ArrayList<Variable>
+  val roleVariables = new ArrayList<Variable>
+    
+  val obligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>> 
+  val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
+  
+  val obligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+  val obligationConsequentEvents = new HashMap<Obligation, List<PAtomPredicate>>
+  val powerAntecedentEvents = new HashMap<Power, List<PAtomPredicate>>
+  
+  val constraintEvents = new ArrayList<List<PAtomPredicate>>
+  
+  val pcSurvivingObligations = new ArrayList<String>
+  val pcVariables = new ArrayList<DeclarationVariable>
+  val pcSituations = new ArrayList<String>
+  val pcRoles = new ArrayList<String>
+  val pcAssets = new ArrayList<String>
+  val pcDomEvents = new ArrayList<String>
+  val pcEnumerations = new ArrayList<String>
+  val pcParameters =  new ArrayList<String>
+  val pcConstraints = new ArrayList<String>
+  val pcAssignProhibitedNorms = new ArrayList<String>
+  
+  def void parse (Model model) {
+    parameters.addAll(model.parameters)
+    
+    // extract assets, events, roles and enumerations
+    for (domainType : model.domainTypes) {
+      if (domainType instanceof RegularType) {
+        var RegularType base = getBaseType(domainType)
+        if (base !== null) {
+          switch base.ontologyType.name {
+            case 'Asset': assets.add(domainType as RegularType)
+            case 'Event': events.add(domainType as RegularType)
+            case 'Role': roles.add(domainType as RegularType)
+          }
+        }
+      } else if (domainType instanceof Enumeration) {
+        enumerations.add(domainType as Enumeration)
+      }
+    }
+    
+    // extract contract parameters and exclude roles
+    for (param : parameters) {    
+      if (param.type.domainType instanceof RegularTypeImpl) {
+        var DomainType domainType = param.type.domainType
+        var RegularType base = getBaseType(domainType)
+        if (base !== null) {
+          if (base.ontologyType.name == 'Role') {
+          }
+          else {
+            pcParameters.add(param.name)
+          }
+        }
+      }
+      else{
+        pcParameters.add(param.name)
+      }
+    }
 
-		// extract obligations, antecedents, consequents and triggers
-		for (obligation: model.obligations){
-			obligations.add(obligation)
-			
-			val proposition = obligation.antecedent
-			obligationAntecedentEvents.put(obligation, collectPropositionEvents(proposition))
-			
-			val proposition2 = obligation.consequent
-			obligationConsequentEvents.put(obligation, collectPropositionEvents(proposition2))
-			
-			if (obligation.trigger !== null){
-				val proposition3 = obligation.trigger
-				obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition3))
-			}
-		}
-		
-		// extract surviving obligations, antecedents, consequents and triggers
-		for (obligation: model.survivingObligations){
-			obligations.add(obligation)
-			
-			val proposition = obligation.antecedent
-			obligationAntecedentEvents.put(obligation, collectPropositionEvents(proposition))
-			
-			val proposition2 = obligation.consequent
-			obligationConsequentEvents.put(obligation, collectPropositionEvents(proposition2))
-			
-			if (obligation.trigger !== null){
-				val proposition3 = obligation.trigger
-				obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition3))
-			}
-			pcSurvivingObligations.add(obligation.name)
-		}
-		
-		// extract powers, antecedents and triggers
-		for (power: model.powers){
-			powers.add(power)
-			
-			val proposition = power.antecedent
-			powerAntecedentEvents.put(power, collectPropositionEvents(proposition))
-			
-			if (power.trigger !== null){
-				val proposition2 = power.trigger
-				powerTriggerEvents.put(power, collectPropositionEvents(proposition2))				
-			}
-		}
-		
-		// extract event and role variables
-		for(variable: model.variables){
-			if (events.indexOf(variable.type) != -1){
-				eventVariables.add(variable)
-			}
-			
-			if (roles.indexOf(variable.type) != -1){
-				roleVariables.add(variable)
-			}
-		}
-		
-		for (constr : model.constraints) {
-			constraintEvents.add(collectPropositionEvents(constr))
-			constraints.add(constr)
-		}
-		
-		generateHappenVariables()
-	}
-	
-	def RegularType getBaseType(DomainType domainType) {
-		switch (domainType) {
-			RegularType:
-				if (domainType.ontologyType !== null) {
-					return domainType
-				} else {
-					return getBaseType(domainType.regularType)
-				}
-			default:
-				null
-		}
-	}
-	
-	def String getEvent(PredicateFunction predicate){
-		switch (predicate){
-			PredicateFunctionHappens: return '''�extractEventVariableString(predicate.event)�'''
-			PredicateFunctionWHappensBefore: return '''�extractEventVariableString(predicate.event)�'''
-			PredicateFunctionSHappensBefore: return '''�extractEventVariableString(predicate.event)�'''
-			PredicateFunctionHappensAfter: return '''�extractEventVariableString(predicate.event)�'''
-			PredicateFunctionHappensWithin: return '''�extractEventVariableString(predicate.event)�'''
-		}	
-	}
-	
-	def String getSituations () {
-		var situations = ""
-		for(situation : pcSituations) {
-			situations += situation + "\n\n"
-		}
-		return situations
-	}
-	
-	def static String eventToSituation (String event) {
-		switch (event) {
-			case "violated": return "violation"
-			case "suspended": return "suspension"
-			case "resumed": return "resumption"
-			case "discharged": return "dischargment"
-			case "expired": return "expirtion"
-			case "fulfilled": return "fulfillment"
-			case "terminated": return "termination"			
-			case "revokedParty": return "unassign"				
-		}
-	}
-	
-	def String generateEventVariableString(Event event){
-		switch (event){
-			VariableEvent: return generateDotExpressionString(event.variable, null)
-			PowerEvent: return '''�event.powerVariable.name�.state=�eventToSituation(event.eventName.toLowerCase)�'''
-			ObligationEvent: return '''�event.obligationVariable.name�.state=�eventToSituation(event.eventName.toLowerCase)�'''			
-			ContractEvent: return '''cnt.state=�eventToSituation(event.eventName.toLowerCase)�'''
-		}	
-	}
-	
-	def boolean isDuplicate(String event1, String event2, String happenClass) {
-		for(variable : pcVariables) {
-			if(variable.type.equals(happenClass) && variable.parameters.get(0).value.equals(event1) && variable.parameters.get(1).value.equals(event2))
-				return true
-		}
-		return false
-	}
-	
-	def void generateHappenVariables() {
-		// merge predicates and remove duplicates
-		var atoms = new ArrayList<PredicateFunction>()
-		
-		var valueLists = powerAntecedentEvents.values();
-		for (list : valueLists) {
-			for(v : list)
-		   		atoms.add(v.predicateFunction)
-		}
-		
-		valueLists = powerTriggerEvents.values();
-		for (list : valueLists) {
-			for(v : list)
-		   		atoms.add(v.predicateFunction)
-		}
-		
-		valueLists = obligationAntecedentEvents.values();
-		for (list : valueLists) {
-			for(v : list)
-		   		atoms.add(v.predicateFunction)
-		}
-		
-		valueLists = obligationConsequentEvents.values();
-		for (list : valueLists) {
-			for(v : list)
-		   		atoms.add(v.predicateFunction)
-		}
-		
-		// instantiate happen predicates
-	    for(it : atoms){
-	       if(it instanceof PredicateFunctionWHappensBefore){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
-	       					
-	       					if(!isDuplicate(pair1.value, pair2.value, 'WHappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)	       					
-	       					}
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
-	       					if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
-		       				}		       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
-	       					if(!isDuplicate(pair1.value, pair2.value, 'ShappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)
-		       				}
-		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
-		       				}
-		       			}
-	       				PointAtomContractEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
-		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
-		       				}
-		       			}
-	       			}
-	       		}	 
-	       		
-//	       	if(it instanceof PredicateFunctionWHappensBeforeEvent){
-//	       		val event = it.event2
-//	       			switch (event) {
-//	       				VariableEvent: {
-//	       					val pair1 = new Pair("event1", generateEventVariableString(it.event1))
-//	       					val pair2 = new Pair("event2", generateEventVariableString(it.event2))
-//	       					
-//	       					if(!isDuplicate(pair1.value, pair2.value, 'WHappensBeforeE')) {
-//		       					var pairs = new ArrayList<Pair<String, String>>()
-//		       					pairs.add(pair1)
-//		       					pairs.add(pair2)
-//		       					addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)	       					
-//	       					}
-//	       				}
-//	       				ObligationEvent: {
-//	       					val pair1 = new Pair("event1", generateEventVariableString(it.event1))
-//	       					val pair2 = new Pair("event2", generateEventVariableString(it.event2))
-//	       					if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
-//		       					var pairs = new ArrayList<Pair<String, String>>()
-//		       					pairs.add(pair1)
-//		       					pairs.add(pair2)
-//		       					addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
-//		       				}		       					
-//		       			}
-//	       				PowerEvent: {
-//	       					val pair1 = new Pair("event1", generateEventVariableString(it.event1))
-//	       					val pair2 = new Pair("event2", generateEventVariableString(it.event2))
-//	       					if(!isDuplicate(pair1.value, pair2.value, 'ShappensBeforeE')) {
-//		       					var pairs = new ArrayList<Pair<String, String>>()
-//		       					pairs.add(pair1)
-//		       					pairs.add(pair2)
-//		       					addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "ShappensBeforeE", pairs)
-//		       				}
-//		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
-//		       					var pairs = new ArrayList<Pair<String, String>>()
-//		       					pairs.add(pair1)
-//		       					pairs.add(pair2)
-//		       					addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
-//		       				}
-//		       			}
-//	       				ContractEvent: {
-//	       					val pair1 = new Pair("event1", generateEventVariableString(it.event1))
-//	       					val pair2 = new Pair("event2", generateEventVariableString(it.event2))
-//		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
-//		       					var pairs = new ArrayList<Pair<String, String>>()
-//		       					pairs.add(pair1)
-//		       					pairs.add(pair2)
-//		       					addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
-//		       				}
-//		       			}
-//	       			}
-//	       		}	 
-	       		
-   			if(it instanceof PredicateFunctionSHappensBefore){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
-	       					
-	       					if(!isDuplicate(pair1.value, pair2.value, 'SHappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)	       					
-	       					}
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
-		       				if(!isDuplicate(pair1.value, pair2.value, 'ShappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)
-		       				}		       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
-		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
-		       				}
-		       			}
-	       				PointAtomContractEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
-		       				if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
-		       				}
-		       			}
-	       			}
-	       		}
-	       		
-	       if(it instanceof PredicateFunctionHappensAfter){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
-	       					
-	       					if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)	       					
-	       					}
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
-	       					if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
-		       				}		       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
-	       					if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
-		       				}
-		       			}
-	       				PointAtomContractEvent: {
-	       					val pair1 = new Pair("event1", generateEventVariableString(it.event))
-	       					val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
-	       					if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
-		       					var pairs = new ArrayList<Pair<String, String>>()
-		       					pairs.add(pair1)
-		       					pairs.add(pair2)
-		       					addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
-		       				}
-		       			}
-	       			}
-	       		}	
-	    }
-	}
-		
-	def String generateVEProposition (String normName, String ev) {
-		return "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + normName + "_debtor._name & " + normName + "_debtor._is_performer)))"
-	}
-	
-	// challenge: convert Happens(violated(obligation)) to a situation
-	def String generateVEFunctionString(String normName, PredicateFunction predicate){		
-		switch (predicate){
-			PredicateFunctionHappens: {
-							//predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
-							switch (predicate.event) {
-									VariableEvent: return '''�generateVEProposition(normName, generateEventVariableString(predicate.event))�'''
-									PowerEvent: return '''�generateEventVariableString(predicate.event)�'''
-									ObligationEvent: return '''�generateEventVariableString(predicate.event)�'''		
-									ContractEvent: return '''�generateEventVariableString(predicate.event)�'''
-								}								
-							}
-			PredicateFunctionWHappensBefore: {
-					//predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''�generateVEProposition(normName, generateEventVariableString(predicate.event))�'''				
-				}
-			PredicateFunctionSHappensBefore: {
-					//predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''�generateVEProposition(normName, generateEventVariableString(predicate.event))�'''				
-				}
-			PredicateFunctionHappensAfter: {
-					//predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					return '''�generateVEProposition(normName, generateEventVariableString(predicate.event))�'''					
-				}
-			PredicateFunctionHappensWithin: 
-					if (predicate.interval instanceof IntervalFunction) {
-						//val pi = predicate.interval
-						//val pe = pi.intervalExpression
-						//if (pe instanceof IntervalFunction) {
-						//	val pa1 = pe.arg1
-						//	val pa2 = pe.arg2
-							//predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
-						//}
-						return '''�generateVEProposition(normName, generateEventVariableString(predicate.event))�'''											
-					}
-					/*else {
-						predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
-						return '''HappensWithin(�predicate.event�, �predicate.interval�)'''						
-					}*/
-		}	
-	}
-	
-	def String generateViolateExpireString(String normName, Proposition proposition){
-		switch (proposition){
-			POr: return generateViolateExpireString(normName, proposition.left) + "&" + generateViolateExpireString(normName, proposition.right) 
-			PAnd: return generateViolateExpireString(normName, proposition.left) + "|" + generateViolateExpireString(normName, proposition.right) 
-			PAtomRecursive: return "(" + generateViolateExpireString(normName, proposition.inner) + ")"
-			PComparison: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
-			NegatedPAtom: return "(" + generateViolateExpireString(normName, proposition.negated) + ")"
-			PEquality: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
-			PAtomVariable: return generateDotExpressionString(proposition.variable, null)
-			PAtomPredicate: return generateVEFunctionString(normName, proposition.predicateFunction)
-			PAtomPredicateTrueLiteral: return "FALSE"
-			PAtomPredicateFalseLiteral: return "TRUE" 
-			PAtomDoubleLiteral: return proposition.value.toString
-			PAtomIntLiteral: return proposition.value.toString
-			PAtomStringLiteral: return proposition.value
-			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
-		}
-	}
-	
-	def void addVariable (String name, String starterProposition, String variableClass, ArrayList<Pair<String, String>> attributes) {			
-		val p = new DeclarationVariable(name, starterProposition, variableClass, attributes)
-			
-		//val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
-		pcVariables.add(p)
-		
-		/*switch(variableClass) {
-			case 'Event': {
-				val p = new Pair(name, name + " : Event(" + parameters + ");");
-				pcVariables.add(p)
-			}
-			case 'Role': {
-				val p = new Pair(name, name + " : Role(" + parameters + ");");
-				pcVariables.add(p)
-			}
-			default : {
-				val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
-				pcVariables.add(p)
-			}
-		}*/
-	}
-	
-	def void addSituation (String name, String proposition) {
-		pcSituations.add(name + " : Situation (" + proposition + ");")
-	}
-	
-	def String addHappensWith(String evname, String situation) {		
-		val name = "hsituation" + UUID.randomUUID().toString()
-		pcSituations.add(name + " : HappensWith (" + evname + "," + situation + ");")
-		return name + "._holds"
-	}
-	
-	def String generatePowerProposition (String powerName, String exertedEventName) {
-		return "(" + powerName + "._active & " + exertedEventName + "._happened & " + 
-				exertedEventName + ".performer = " + powerName +"_creditor._name & " +
-				 powerName + "_creditor._is_performer )"
-	}
+    // extract obligations, antecedents, consequents and triggers
+    for (obligation: model.obligations){
+      obligations.add(obligation)
+      
+      val proposition = obligation.antecedent
+      obligationAntecedentEvents.put(obligation, collectPropositionEvents(proposition))
+      
+      val proposition2 = obligation.consequent
+      obligationConsequentEvents.put(obligation, collectPropositionEvents(proposition2))
+      
+      if (obligation.trigger !== null){
+        val proposition3 = obligation.trigger
+        obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition3))
+      }
+    }
+    
+    // extract surviving obligations, antecedents, consequents and triggers
+    for (obligation: model.survivingObligations){
+      obligations.add(obligation)
+      
+      val proposition = obligation.antecedent
+      obligationAntecedentEvents.put(obligation, collectPropositionEvents(proposition))
+      
+      val proposition2 = obligation.consequent
+      obligationConsequentEvents.put(obligation, collectPropositionEvents(proposition2))
+      
+      if (obligation.trigger !== null){
+        val proposition3 = obligation.trigger
+        obligationTriggerEvents.put(obligation, collectPropositionEvents(proposition3))
+      }
+      pcSurvivingObligations.add(obligation.name)
+    }
+    
+    // extract powers, antecedents and triggers
+    for (power: model.powers){
+      powers.add(power)
+      
+      val proposition = power.antecedent
+      powerAntecedentEvents.put(power, collectPropositionEvents(proposition))
+      
+      if (power.trigger !== null){
+        val proposition2 = power.trigger
+        powerTriggerEvents.put(power, collectPropositionEvents(proposition2))       
+      }
+    }
+    
+    // extract event and role variables
+    for(variable: model.variables){
+      if (events.indexOf(variable.type) != -1){
+        eventVariables.add(variable)
+      }
+      
+      if (roles.indexOf(variable.type) != -1){
+        roleVariables.add(variable)
+      }
+    }
+    
+    for (constr : model.constraints) {
+      constraintEvents.add(collectPropositionEvents(constr))
+      constraints.add(constr)
+    }
+    
+    generateHappenVariables()
+  }
+  
+  def RegularType getBaseType(DomainType domainType) {
+    switch (domainType) {
+      RegularType:
+        if (domainType.ontologyType !== null) {
+          return domainType
+        } else {
+          return getBaseType(domainType.regularType)
+        }
+      default:
+        null
+    }
+  }
+  
+  def String getEvent(PredicateFunction predicate){
+    switch (predicate){
+      PredicateFunctionHappens: return '''«extractEventVariableString(predicate.event)»'''
+      PredicateFunctionWHappensBefore: return '''«extractEventVariableString(predicate.event)»'''
+      PredicateFunctionSHappensBefore: return '''«extractEventVariableString(predicate.event)»'''
+      PredicateFunctionHappensAfter: return '''«extractEventVariableString(predicate.event)»'''
+      PredicateFunctionHappensWithin: return '''«extractEventVariableString(predicate.event)»'''
+    } 
+  }
+  
+  def String getSituations () {
+    var situations = ""
+    for(situation : pcSituations) {
+      situations += situation + "\n\n"
+    }
+    return situations
+  }
+  
+  def static String eventToSituation (String event) {
+    switch (event) {
+      case "violated": return "violation"
+      case "suspended": return "suspension"
+      case "resumed": return "resumption"
+      case "discharged": return "dischargment"
+      case "expired": return "expirtion"
+      case "fulfilled": return "fulfillment"
+      case "terminated": return "termination"     
+      case "revokedParty": return "unassign"        
+    }
+  }
+  
+  def String generateEventVariableString(Event event){
+    switch (event){
+      VariableEvent: return generateDotExpressionString(event.variable, null)
+      PowerEvent: return '''«event.powerVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''
+      ObligationEvent: return '''«event.obligationVariable.name».state=«eventToSituation(event.eventName.toLowerCase)»'''     
+      ContractEvent: return '''cnt.state=«eventToSituation(event.eventName.toLowerCase)»'''
+    } 
+  }
+  
+  def boolean isDuplicate(String event1, String event2, String happenClass) {
+    for(variable : pcVariables) {
+      if(variable.type.equals(happenClass) && variable.parameters.get(0).value.equals(event1) && variable.parameters.get(1).value.equals(event2))
+        return true
+    }
+    return false
+  }
+  
+  def void generateHappenVariables() {
+    // merge predicates and remove duplicates
+    var atoms = new ArrayList<PredicateFunction>()
+    
+    var valueLists = powerAntecedentEvents.values();
+    for (list : valueLists) {
+      for(v : list)
+          atoms.add(v.predicateFunction)
+    }
+    
+    valueLists = powerTriggerEvents.values();
+    for (list : valueLists) {
+      for(v : list)
+          atoms.add(v.predicateFunction)
+    }
+    
+    valueLists = obligationAntecedentEvents.values();
+    for (list : valueLists) {
+      for(v : list)
+          atoms.add(v.predicateFunction)
+    }
+    
+    valueLists = obligationConsequentEvents.values();
+    for (list : valueLists) {
+      for(v : list)
+          atoms.add(v.predicateFunction)
+    }
+    
+    // instantiate happen predicates
+      for(it : atoms){
+         if(it instanceof PredicateFunctionWHappensBefore){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
+                  
+                  if(!isDuplicate(pair1.value, pair2.value, 'WHappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)                  
+                  }
+                }
+                PointAtomObligationEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
+                  }                   
+                }
+                PointAtomPowerEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'ShappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)
+                  }
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
+                  }
+                }
+                PointAtomContractEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
+                  }
+                }
+              }
+            }  
+            
+          if(it instanceof PredicateFunctionWHappensBeforeEvent){
+            val event = it.event2
+              switch (event) {
+                VariableEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event1))
+                  val pair2 = new Pair("event2", generateEventVariableString(it.event2))
+                  
+                  if(!isDuplicate(pair1.value, pair2.value, 'WHappensBeforeE')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)                  
+                  }
+                }
+                ObligationEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event1))
+                  val pair2 = new Pair("event2", generateEventVariableString(it.event2))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
+                  }                   
+                }
+                PowerEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event1))
+                  val pair2 = new Pair("event2", generateEventVariableString(it.event2))
+                  if(!isDuplicate(pair1.value, pair2.value, 'ShappensBeforeE')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "ShappensBeforeE", pairs)
+                  }
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
+                  }
+                }
+                ContractEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event1))
+                  val pair2 = new Pair("event2", generateEventVariableString(it.event2))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBeforeE')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbeforeE_" + pair1.value + "_" + pair2.value, null, "WhappensBeforeE", pairs)
+                  }
+                }
+              }
+            }  
+            
+        if(it instanceof PredicateFunctionSHappensBefore){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
+                  
+                  if(!isDuplicate(pair1.value, pair2.value, 'SHappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)                  
+                  }
+                }
+                PointAtomObligationEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'ShappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "ShappensBefore", pairs)
+                  }                   
+                }
+                PointAtomPowerEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
+                  }
+                }
+                PointAtomContractEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'WhappensBefore')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hbefore_" + pair1.value + "_" + pair2.value, null, "WhappensBefore", pairs)
+                  }
+                }
+              }
+            }
+            
+         if(it instanceof PredicateFunctionHappensAfter){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
+                  
+                  if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)                 
+                  }
+                }
+                PointAtomObligationEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.obligationEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
+                  }                   
+                }
+                PointAtomPowerEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.powerEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
+                  }
+                }
+                PointAtomContractEvent: {
+                  val pair1 = new Pair("event1", generateEventVariableString(it.event))
+                  val pair2 = new Pair("event2", generateEventVariableString(pexp.contractEvent))
+                  if(!isDuplicate(pair1.value, pair2.value, 'HappensAfter')) {
+                    var pairs = new ArrayList<Pair<String, String>>()
+                    pairs.add(pair1)
+                    pairs.add(pair2)
+                    addVariable("hafter_" + pair1.value + "_" + pair2.value, null, "HappensAfter", pairs)
+                  }
+                }
+              }
+            } 
+      }
+  }
+    
+  def String generateVEProposition (String normName, String ev) {
+    return "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + normName + "_debtor._name & " + normName + "_debtor._is_performer)))"
+  }
+  
+  // challenge: convert Happens(violated(obligation)) to a situation
+  def String generateVEFunctionString(String normName, PredicateFunction predicate){    
+    switch (predicate){
+      PredicateFunctionHappens: {
+              //predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
+              switch (predicate.event) {
+                  VariableEvent: return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''
+                  PowerEvent: return '''«generateEventVariableString(predicate.event)»'''
+                  ObligationEvent: return '''«generateEventVariableString(predicate.event)»'''    
+                  ContractEvent: return '''«generateEventVariableString(predicate.event)»'''
+                }               
+              }
+      PredicateFunctionWHappensBefore: {
+          //predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+          return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''        
+        }
+      PredicateFunctionSHappensBefore: {
+          //predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+          return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''        
+        }
+      PredicateFunctionHappensAfter: {
+          //predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+          return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''          
+        }
+      PredicateFunctionHappensWithin: 
+          if (predicate.interval instanceof IntervalFunction) {
+            //val pi = predicate.interval
+            //val pe = pi.intervalExpression
+            //if (pe instanceof IntervalFunction) {
+            //  val pa1 = pe.arg1
+            //  val pa2 = pe.arg2
+              //predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
+            //}
+            return '''«generateVEProposition(normName, generateEventVariableString(predicate.event))»'''                      
+          }
+          /*else {
+            predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
+            return '''HappensWithin(«predicate.event», «predicate.interval»)'''           
+          }*/
+    } 
+  }
+  
+  def String generateViolateExpireString(String normName, Proposition proposition){
+    switch (proposition){
+      POr: return generateViolateExpireString(normName, proposition.left) + "&" + generateViolateExpireString(normName, proposition.right) 
+      PAnd: return generateViolateExpireString(normName, proposition.left) + "|" + generateViolateExpireString(normName, proposition.right) 
+      PAtomRecursive: return "(" + generateViolateExpireString(normName, proposition.inner) + ")"
+      PComparison: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
+      NegatedPAtom: return "(" + generateViolateExpireString(normName, proposition.negated) + ")"
+      PEquality: return generateViolateExpireString(normName, proposition.left) + inverseOperator(proposition.op) + generateViolateExpireString(normName, proposition.right)
+      PAtomVariable: return generateDotExpressionString(proposition.variable, null)
+      PAtomPredicate: return generateVEFunctionString(normName, proposition.predicateFunction)
+      PAtomPredicateTrueLiteral: return "FALSE"
+      PAtomPredicateFalseLiteral: return "TRUE" 
+      PAtomDoubleLiteral: return proposition.value.toString
+      PAtomIntLiteral: return proposition.value.toString
+      PAtomStringLiteral: return proposition.value
+      PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
+    }
+  }
+  
+  def void addVariable (String name, String starterProposition, String variableClass, ArrayList<Pair<String, String>> attributes) {     
+    val p = new DeclarationVariable(name, starterProposition, variableClass, attributes)
+      
+    //val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
+    pcVariables.add(p)
+    
+    /*switch(variableClass) {
+      case 'Event': {
+        val p = new Pair(name, name + " : Event(" + parameters + ");");
+        pcVariables.add(p)
+      }
+      case 'Role': {
+        val p = new Pair(name, name + " : Role(" + parameters + ");");
+        pcVariables.add(p)
+      }
+      default : {
+        val p = new Pair(name, name + " :" + variableClass + "(" + parameters + ");");
+        pcVariables.add(p)
+      }
+    }*/
+  }
+  
+  def void addSituation (String name, String proposition) {
+    pcSituations.add(name + " : Situation (" + proposition + ");")
+  }
+  
+  def String addHappensWith(String evname, String situation) {    
+    val name = "hsituation" + UUID.randomUUID().toString()
+    pcSituations.add(name + " : HappensWith (" + evname + "," + situation + ");")
+    return name + "._holds"
+  }
+  
+  def String generatePowerProposition (String powerName, String exertedEventName) {
+    return "(" + powerName + "._active & " + exertedEventName + "._happened & " + 
+        exertedEventName + ".performer = " + powerName +"_creditor._name & " +
+         powerName + "_creditor._is_performer )"
+  }
 
-	def String generateProposition (String normName, normType ntype, propositionType ptype, String exertedEventName) {
-		switch ptype {
-			case ANTECEDENT: {
-				return "(" + exertedEventName + ".event._happened" + ")"
-				}
-			case TRIGGER: {
-				return "(" + exertedEventName + ".event._happened" + ")"
-				}
-			case CONSEQUENT:
-				switch(ntype){
-					case OBLIGATION: {
-						return "(" + exertedEventName + ".event._happened & " + 
-								exertedEventName + ".event.performer = " + normName +"_debtor._name & " +
-								normName + "_debtor._is_performer" + ")"
-						}
-				 	case POWER: {
-						return "(" + exertedEventName + ".event._happened & " + 
-							exertedEventName + ".event.performer = " + normName +"_creditor._name & " +
-							normName + "_creditor._is_performer" + ")"
-				 		}
-				 }
-			default: return "(" + exertedEventName + ".event._happened" + ")"
-		}
-	}
-	
-	def String generateContractPreconditionSituation(Model model) {
-		var precondition = ""
-		for(cond : model.preconditions){
-			if(precondition.length == 0)
-				precondition += generatePropositionString(null, null, null, cond)
-			else
-				precondition += " & " + generatePropositionString(null, null, null, cond)
-		}
-		
-		if(precondition.length > 0) {
-			var situationName = model.contractName + "_precondition"
-			addSituation(situationName, "cnt.state = form -> " + precondition)
-			return situationName + "._holds"
-		}
-		return ""
-	}
-	
-	def String generateContractTerminationSituation (Model model) {
-		var isFirst = true
-		var cntTermPowers = new String("")
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PFContractTerminated) {
-				val eventName = power.name + "_exerted"			
-				addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-				
-				addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-				
-				if(isFirst) {
-					cntTermPowers += generatePowerProposition(power.name, eventName)
-					isFirst = false;
-				}
-				else
-					cntTermPowers += '|' + generatePowerProposition(power.name, eventName)						
-			}
-		}				
-		
-		if(cntTermPowers.length > 0) {
-			var situationName = model.contractName + "_termination"
-			addSituation(situationName, cntTermPowers)
-			return situationName + "._holds"
-		}
-		return "FALSE"
-	}
-	
-	def String generateContractSuspensionSituation (Model model) {
-		var isFirst = true
-		var cntSusPowers = new String("")
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PFContractSuspended) {
-				//val eventName = "suspended_" + model.contractName	
-				val eventName = power.name + "_exerted"			
-				addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-				addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-				
-				if(isFirst) {
-					cntSusPowers += generatePowerProposition(power.name, eventName)
-					isFirst = false;
-				}
-				else
-					cntSusPowers += '|' + generatePowerProposition(power.name, eventName)						
-			}
-		}				
-		
-		if(cntSusPowers.length > 0) {
-			var situationName = model.contractName + "_suspension"
-			addSituation(situationName, cntSusPowers)
-			return situationName + "._holds"
-		}
-		return "FALSE";
-	}
-	
-	def String generateContractResumptionSituation (Model model) {
-		var isFirst = true
-		var cntResPowers = new String("")
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PFContractResumed) {
-				//val eventName = "resumption_" + model.contractName	
-				val eventName = power.name + "_exerted"			
-				addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-				addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-				
-				if(isFirst) {
-					cntResPowers += generatePowerProposition(power.name, eventName)
-					isFirst = false;
-				}
-				else
-					cntResPowers += '|' + generatePowerProposition(power.name, eventName)						
-			}
-		}				
-		
-		if(cntResPowers.length > 0) {
-			var situationName = model.contractName + "_resumption"
-			addSituation(situationName, cntResPowers)
-			return situationName + "._holds"
-		}
-		return "FALSE"
-	}
+  def String generateProposition (String normName, normType ntype, propositionType ptype, String exertedEventName) {
+    switch ptype {
+      case ANTECEDENT: {
+        return "(" + exertedEventName + ".event._happened" + ")"
+        }
+      case TRIGGER: {
+        return "(" + exertedEventName + ".event._happened" + ")"
+        }
+      case CONSEQUENT:
+        switch(ntype){
+          case OBLIGATION: {
+            return "(" + exertedEventName + ".event._happened & " + 
+                exertedEventName + ".event.performer = " + normName +"_debtor._name & " +
+                normName + "_debtor._is_performer" + ")"
+            }
+          case POWER: {
+            return "(" + exertedEventName + ".event._happened & " + 
+              exertedEventName + ".event.performer = " + normName +"_creditor._name & " +
+              normName + "_creditor._is_performer" + ")"
+            }
+         }
+      default: return "(" + exertedEventName + ".event._happened" + ")"
+    }
+  }
+  
+  def String generateContractPreconditionSituation(Model model) {
+    var precondition = ""
+    for(cond : model.preconditions){
+      if(precondition.length == 0)
+        precondition += generatePropositionString(null, null, null, cond)
+      else
+        precondition += " & " + generatePropositionString(null, null, null, cond)
+    }
+    
+    if(precondition.length > 0) {
+      var situationName = model.contractName + "_precondition"
+      addSituation(situationName, "cnt.state = form -> " + precondition)
+      return situationName + "._holds"
+    }
+    return ""
+  }
+  
+  def String generateContractTerminationSituation (Model model) {
+    var isFirst = true
+    var cntTermPowers = new String("")
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFContractTerminated) {
+        val eventName = power.name + "_exerted"     
+        addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+        
+        addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+        
+        if(isFirst) {
+          cntTermPowers += generatePowerProposition(power.name, eventName)
+          isFirst = false;
+        }
+        else
+          cntTermPowers += '|' + generatePowerProposition(power.name, eventName)            
+      }
+    }       
+    
+    if(cntTermPowers.length > 0) {
+      var situationName = model.contractName + "_termination"
+      addSituation(situationName, cntTermPowers)
+      return situationName + "._holds"
+    }
+    return "FALSE"
+  }
+  
+  def String generateContractSuspensionSituation (Model model) {
+    var isFirst = true
+    var cntSusPowers = new String("")
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFContractSuspended) {
+        //val eventName = "suspended_" + model.contractName 
+        val eventName = power.name + "_exerted"     
+        addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+        addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+        
+        if(isFirst) {
+          cntSusPowers += generatePowerProposition(power.name, eventName)
+          isFirst = false;
+        }
+        else
+          cntSusPowers += '|' + generatePowerProposition(power.name, eventName)           
+      }
+    }       
+    
+    if(cntSusPowers.length > 0) {
+      var situationName = model.contractName + "_suspension"
+      addSituation(situationName, cntSusPowers)
+      return situationName + "._holds"
+    }
+    return "FALSE";
+  }
+  
+  def String generateContractResumptionSituation (Model model) {
+    var isFirst = true
+    var cntResPowers = new String("")
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFContractResumed) {
+        //val eventName = "resumption_" + model.contractName  
+        val eventName = power.name + "_exerted"     
+        addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+        addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+        
+        if(isFirst) {
+          cntResPowers += generatePowerProposition(power.name, eventName)
+          isFirst = false;
+        }
+        else
+          cntResPowers += '|' + generatePowerProposition(power.name, eventName)           
+      }
+    }       
+    
+    if(cntResPowers.length > 0) {
+      var situationName = model.contractName + "_resumption"
+      addSituation(situationName, cntResPowers)
+      return situationName + "._holds"
+    }
+    return "FALSE"
+  }
 
-	def Map<String, String> generateObligationsSuspensionSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PowerFunction) {
-				var cons = power.consequent
-				if(cons instanceof PFObligationSuspended) {
-					var oblName = cons.norm.name
-					var eventName = power.name + "_exerted"
-					addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-					addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-					
-					if(situations.get(oblName) === null) {					
-						propositions.put(oblName, generatePowerProposition(power.name, eventName))
-					}
-					else
-						propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))						
-				}			
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_suspension"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + "._holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateObligationsResumptionSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PowerFunction) {
-				var cons = power.consequent
-				if(cons instanceof PFObligationResumed) {
-					var oblName = cons.norm.name
-					//var eventName = "resumption_" + oblName
-					var eventName = power.name + "_exerted"
-					addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-					addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-					
-					if(situations.get(oblName) === null) {					
-						propositions.put(oblName, generatePowerProposition(power.name, eventName))
-					}
-					else
-						propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))						
-				}			
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_resumption"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + "._holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateObligationsDischargeSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PowerFunction) {
-				var cons = power.consequent
-				if(cons instanceof PFObligationDischarged) {
-					var oblName = cons.norm.name
-					//var eventName = "discharged_" + oblName
-					var eventName = power.name + "_exerted"
-					addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-					addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-					
-					if(situations.get(oblName) === null) {					
-						propositions.put(oblName, generatePowerProposition(power.name, eventName))
-					}
-					else
-						propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))						
-				}						
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_discard"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + "._holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateObligationsTerminationSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PowerFunction) {
-				var cons = power.consequent
-				if(cons instanceof PFObligationTerminated) {
-					var oblName = cons.norm.name
-					//var eventName = "termination_" + oblName
-					var eventName = power.name + "_exerted"
-					addVariable(eventName, power.name + ".state=inEffect", "Event", null)
-					addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
-					
-					if(situations.get(oblName) === null) {					
-						propositions.put(oblName, generatePowerProposition(power.name, eventName))
-					}
-					else
-						propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))
-				}
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_termination"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + "._holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateObligationViolatedSituation (Model model) {
-		var Map<String, String> violations = new HashMap<String, String>()
-			
-		for(obligation: model.obligations) {
-			val violation = generateViolateExpireString(obligation.name, obligation.consequent)
-			if (violation !== null){
-				var situationName = obligation.name + "_violated"
-				addSituation(situationName, violation)
-				violations.put(obligation.name, situationName + "._holds")
-			}			
-			
-			/*var consEvents = obligationConsequentEvents.get(obligation)
-			var consequent = ""
-			if(consEvents !== null)
-				for(e : consEvents) {
-					var ev = getEvent(e.predicateFunction)
-					if (consequent != "")
-						consequent += " & "
-					consequent += "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer)))"
-				}
-				var situationName = obligation.name + "_violated"
-				addSituation(situationName, consequent)
-				violations.put(obligation.name, situationName + ".state = holds")*/
-		}		
-		
-		for(obligation: model.survivingObligations) {
-			val violation = generateViolateExpireString(obligation.name, obligation.consequent)
-			if (violation !== null){
-				var situationName = obligation.name + "_violated"
-				addSituation(situationName, violation)
-				violations.put(obligation.name, situationName + "._holds")
-			}			
-			
-			/*var consEvents = obligationConsequentEvents.get(obligation)
-			var consequent = ""
-			if(consEvents !== null)
-				for(e : consEvents) {
-					var ev = getEvent(e.predicateFunction)
-					if (consequent != "")
-						consequent += " & "
-					consequent += "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer)))"
-				}
-				var situationName = obligation.name + "_violated"
-				addSituation(situationName, consequent)
-				violations.put(obligation.name, situationName + ".state = holds")*/
-		}	
-		
-		return violations
-	}
-	
-	def Map<String, String> generateObligationExpiredSituation (Model model) {
-		var Map<String, String> expirations = new HashMap<String, String>()
-			
-		for(obligation: model.obligations) {
-			val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
-			if (expiration !== null){
-				var situationName = obligation.name + "_expired"
-				addSituation(situationName, expiration)
-				expirations.put(obligation.name, situationName + "._holds")
-			}
-			
-			/*var  antEvents = obligationAntecedentEvents.get(obligation)
-			if(antEvents !== null)
-				for(e : antEvents) {
-					var ev = getEvent(e.predicateFunction)
-					var situationName = obligation.name + "_expired"
-					addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer))")
-					expirations.put(obligation.name, situationName + ".state = holds")
-				}*/
-		}	
-		
-		for(obligation: model.survivingObligations) {
-			val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
-			if (expiration !== null){
-				var situationName = obligation.name + "_expired"
-				addSituation(situationName, expiration)
-				expirations.put(obligation.name, situationName + "._holds")
-			}
-			
-			/*var  antEvents = obligationAntecedentEvents.get(obligation)
-			if(antEvents !== null)
-				for(e : antEvents) {
-					var ev = getEvent(e.predicateFunction)
-					var situationName = obligation.name + "_expired"
-					addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer))")
-					expirations.put(obligation.name, situationName + ".state = holds")
-				}*/
-		}		
-		
-		return expirations
-	}
-	
-	def Map<String, String> generatePowerExpiredSituation (Model model) {
-		var Map<String, String> expirations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			val expiration = generateViolateExpireString(power.name, power.antecedent)
-			if (expiration !== null){
-				var situationName = power.name + "_expired"
-				addSituation(situationName, expiration)
-				expirations.put(power.name, situationName + "._holds")
-			}
-			
-			
-			/*var  antEvents = powerAntecedentEvents.get(power)
-			if(antEvents !== null)
-				for(e : antEvents) {
-					var ev = getEvent(e.predicateFunction)
-					var situationName = power.name + "_expired"
-					addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + power.name + "_debtor._name & " + power.name + "_debtor._is_performer))")
-					expirations.put(power.name, situationName + ".state = holds")
-				}*/
-		}		
-		
-		return expirations
-	}
-	
-	def Map<String, String> generatePowerExertedSituation (Model model) {
-		var Map<String, String> exertion = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			var situationName = power.name + "_exertion._holds"
-			exertion.put(power.name, situationName)
-		}		
-		
-		return exertion
-	}
-	
-	def Map<String, String> generateAntecedentsSituation (Model model) {
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(obligation: model.obligations) {
-			val antecedent = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.ANTECEDENT, obligation.antecedent)
-			if(antecedent !== null && antecedent != "TRUE") {
-				val sname = obligation.name + "_antecedent"
-				addSituation(sname, antecedent)
-				situations.put(obligation.name, sname + "._holds")			
-			}
-		}
-		
-		for(obligation: model.survivingObligations) {
-			val antecedent = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.ANTECEDENT, obligation.antecedent)
-			if(antecedent !== null && antecedent != "TRUE") {
-				val sname = obligation.name + "_antecedent"
-				addSituation(sname, antecedent)
-				situations.put(obligation.name, sname + "._holds")			
-			}
-		}
-		
-		for(power: model.powers) {
-			val antecedent = generatePropositionString(power.name, normType.POWER, propositionType.ANTECEDENT, power.antecedent)
-			if(antecedent !== null && antecedent != "TRUE") {
-				val sname = power.name + "_antecedent"
-				addSituation(sname, antecedent)
-				situations.put(power.name, sname + "._holds")
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateConsequentsSituation (Model model) {
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(obligation: model.obligations) {
-			val sname = obligation.name + "_consequent"
-			addSituation(sname, generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.CONSEQUENT, obligation.consequent))
-			situations.put(obligation.name, sname + "._holds")
-		}
-		
-		for(obligation: model.survivingObligations) {
-			val sname = obligation.name + "_consequent"
-			addSituation(sname, generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.CONSEQUENT, obligation.consequent))
-			situations.put(obligation.name, sname + "._holds")
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generateTriggersSituation (Model model) {
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(obligation: model.obligations) {
-			val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
-			
-			if(trigger !== null && trigger != 'TRUE') {
-				val sname = obligation.name + "_trigger"
-				addSituation(sname, trigger)
-				situations.put(obligation.name, sname + "._holds")			
-			}
-		}
-		
-		for(obligation: model.survivingObligations) {
-			val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
-			
-			if(trigger !== null && trigger != 'TRUE') {
-				val sname = obligation.name + "_trigger"
-				addSituation(sname, trigger)
-				situations.put(obligation.name, sname + "._holds")			
-			}
-		}
-		
-		for(power: model.powers) {
-			val trigger = generatePropositionString(power.name, normType.POWER, propositionType.TRIGGER, power.trigger)
-			val sname = power.name + "_trigger"
-			if(trigger !== null && trigger != 'TRUE') {
-				addSituation(sname, trigger)
-				situations.put(power.name, sname + "._holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	
-/*	def Map<String, String> generatePowersSuspensionSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
- 		for(power: model.powers) {
-			if(power.consequent instanceof PFPowerSuspended) {
-				//var oblName = power.consequent.norm		get an error!
-				var powName = "delivery"
-				var eventName = "suspension_" + powName
-				addEvent(eventName, power.name + ".state=inEffect", null, null)
-				
-				if(situations.get(powName) == null) {					
-					propositions.put(powName, generatePowerProposition(power.name, eventName))
-				}
-				else
-					propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))						
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_suspension"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + ".state=holds")			
-			}
-		}
-		
-		return situations
-	}*/
-	
-	/*def Map<String, String> generatePowersResumptionSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PFPowerResumed) {
-				//var oblName = power.consequent.norm		get an error!
-				var powName = "delivery"
-				var eventName = "resumption_" + powName
-				addEvent(eventName, power.name + ".state=inEffect")
-				
-				if(situations.get(powName) == null) {					
-					propositions.put(powName, generatePowerProposition(power.name, eventName))
-				}
-				else
-					propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))						
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_resumption"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + ".state=holds")			
-			}
-		}
-		
-		return situations
-	}
-	
-	def Map<String, String> generatePowerwTerminationSituation (Model model) {
-		var Map<String, String> propositions = new HashMap<String, String>()
-		var Map<String, String> situations = new HashMap<String, String>()
-			
-		for(power: model.powers) {
-			if(power.consequent instanceof PFPowerTerminated) {
-				//var oblName = power.consequent.norm		get an error!
-				var powName = "delivery"
-				var eventName = "termination_" + powName
-				addEvent(eventName, power.name + ".state=inEffect")
-				
-				if(situations.get(powName) == null) {					
-					propositions.put(powName, generatePowerProposition(power.name, eventName))
-				}
-				else
-					propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))						
-			}
-		}			
-		
-		for(Map.Entry<String, String> entry : propositions.entrySet()) {
-			if(entry.value.length > 0) {
-				var situationName = entry.getKey() + "_termination"
-				addSituation(situationName, entry.getValue())
-				situations.put(entry.getKey(), situationName + ".state=holds")			
-			}
-		}
-		
-		return situations
-	}*/
-	
-	def List<PAtomPredicate> collectPropositionEvents(Proposition proposition){
-		val list = new ArrayList<PAtomPredicate>
-		switch (proposition){
-			POr: {
-				list.addAll(collectPropositionEvents(proposition.left))
-				list.addAll(collectPropositionEvents(proposition.right))
-			} 
-			PAnd: {
-				list.addAll(collectPropositionEvents(proposition.left))
-				list.addAll(collectPropositionEvents(proposition.right))
-			} 
-			PEquality: {
-				list.addAll(collectPropositionEvents(proposition.left))
-				list.addAll(collectPropositionEvents(proposition.right))
-			} 
-			PComparison: {
-				list.addAll(collectPropositionEvents(proposition.left))
-				list.addAll(collectPropositionEvents(proposition.right))
-			} 
-			PAtomRecursive: list.addAll(collectPropositionEvents(proposition.inner))
-			NegatedPAtom: list.addAll(collectPropositionEvents(proposition.negated))
-			PAtomPredicate: list.add(proposition)
-//			PAtomEnum:
-//			PAtomVariable: 
-//			PAtomPredicateTrueLiteral: 
-//			PAtomPredicateFalseLiteral: 
-//			PAtomIntLiteral: 
-//			PAtomStringLiteral: 
-		}
-		return list
-	}
-	
-	def static String generateDotExpressionString (Ref argRef, String thisString) {
-		val ids = new ArrayList<String>()
-		var ref = argRef
-		while (ref instanceof VariableDotExpression){
-			ids.add(ref.tail.name)
-			ref = ref.ref	
-		}
-		if (ref instanceof VariableRef) {
-			ids.add((ref as VariableRef).variable)	
-		}
-		if (thisString !== null)
-			ids.add(thisString)
-		
-		var revIds = ids.reverse()
-		var expression = ""
-		for(id : revIds)
-			if(expression === ""){
-				expression = id
-			} else {
-				expression += "." + id
-			}
-				
-		return expression
-	}
-	
-	def String extractEventVariableString(Event event){
-		switch (event){
-			VariableEvent: return generateDotExpressionString(event.variable, null)
-			PowerEvent: return '''�event.eventName.toLowerCase�'''
-			ObligationEvent: return '''�event.eventName.toLowerCase�'''
-			ContractEvent: return '''�event.eventName.toLowerCase�'''
-		}	
-	}
-	
-	def String getEqualityOperator(String op) { 
-		switch (op) {
-			case '!=': return '!=='
-			case '==': return '==='
-		}
-	}
-	
-	def String inverseOperator(String op) { 
-		switch (op) {
-			case '!=': return '==='
-			case '==': return '!=='
-			case '>': return '<='
-			case '<': return '>='
-			case '>=': return '<'
-			case '<=': return '>'
-		}
-	}
-	
-	def String getHappensPredicateVarName(PredicateFunction it) {
-		if(it instanceof PredicateFunctionWHappensBefore){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateDotExpressionString(pexp.variable, null)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.obligationEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2	       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.powerEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-		       			}
-	       				PointAtomContractEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.contractEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-		       			}
-	       			}
-	       }
-	       
-	       	if(it instanceof PredicateFunctionSHappensBefore){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateDotExpressionString(pexp.variable, null)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.obligationEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2	       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.powerEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-		       			}
-	       				PointAtomContractEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.contractEvent)
-	       					return "hbefore_" + eventN1 + "_" + eventN2
-		       			}
-	       			}
-	       }
-	       
-	       if(it instanceof PredicateFunctionHappensAfter){
-	       		val point = it.point
-	       			val pexp = point.pointExpression
-	       			switch (pexp) {
-	       				PointAtomParameterDotExpression: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateDotExpressionString(pexp.variable, null)
-	       					return "hafter_" + eventN1 + "_" + eventN2
-	       				}
-	       				PointAtomObligationEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.obligationEvent)
-	       					return "hafter_" + eventN1 + "_" + eventN2	       					
-		       			}
-	       				PointAtomPowerEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.powerEvent)
-	       					return "hafter_" + eventN1 + "_" + eventN2
-		       			}
-	       				PointAtomContractEvent: {
-	       					val eventN1 = generateEventVariableString(it.event)
-	       					val eventN2 = generateEventVariableString(pexp.contractEvent)
-	       					return "hafter_" + eventN1 + "_" + eventN2
-		       			}
-	       			}
-	       }
-	}
-	
-	// challenge: convert Happens(violated(obligation)) to a situation
-	def String generatePredicateFunctionString(String normName, normType nType, propositionType pType, PredicateFunction predicate){		
-		switch (predicate){
-			PredicateFunctionHappens: {
-							predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
-							switch (predicate.event) {
-									VariableEvent: return '''�generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))�'''
-									PowerEvent: return '''�generateEventVariableString(predicate.event)�'''
-									ObligationEvent: return '''�generateEventVariableString(predicate.event)�'''		
-									ContractEvent: return '''�generateEventVariableString(predicate.event)�'''
-								}								
-							}
-			PredicateFunctionWHappensBefore: {	
-				
-				return getHappensPredicateVarName(predicate) + "._true"	
-					
-				//val constraint = generateConstraint(predicate)	
-				//val event1 = extractEventVariableString(predicate.event)
-//				return "HeppensBefore(" + event + ".state = active & next(" + event + ".state) = happened", 
-				//predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, event1, predicate.point.pointExpression))
-				//if(constraint !== null)
-				//	return '''�generateProposition(normName, nType, pType, event1)� & �constraint�'''		
-				//return '''�generateProposition(normName, nType, pType, event1)�'''
+  def Map<String, String> generateObligationsSuspensionSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PowerFunction) {
+        var cons = power.consequent
+        if(cons instanceof PFObligationSuspended) {
+          var oblName = cons.norm.name
+          var eventName = power.name + "_exerted"
+          addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+          addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+          
+          if(situations.get(oblName) === null) {          
+            propositions.put(oblName, generatePowerProposition(power.name, eventName))
+          }
+          else
+            propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))            
+        }     
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_suspension"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + "._holds")     
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateObligationsResumptionSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PowerFunction) {
+        var cons = power.consequent
+        if(cons instanceof PFObligationResumed) {
+          var oblName = cons.norm.name
+          //var eventName = "resumption_" + oblName
+          var eventName = power.name + "_exerted"
+          addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+          addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+          
+          if(situations.get(oblName) === null) {          
+            propositions.put(oblName, generatePowerProposition(power.name, eventName))
+          }
+          else
+            propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))            
+        }     
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_resumption"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + "._holds")     
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateObligationsDischargeSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PowerFunction) {
+        var cons = power.consequent
+        if(cons instanceof PFObligationDischarged) {
+          var oblName = cons.norm.name
+          //var eventName = "discharged_" + oblName
+          var eventName = power.name + "_exerted"
+          addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+          addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+          
+          if(situations.get(oblName) === null) {          
+            propositions.put(oblName, generatePowerProposition(power.name, eventName))
+          }
+          else
+            propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))            
+        }           
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_discard"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + "._holds")     
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateObligationsTerminationSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PowerFunction) {
+        var cons = power.consequent
+        if(cons instanceof PFObligationTerminated) {
+          var oblName = cons.norm.name
+          //var eventName = "termination_" + oblName
+          var eventName = power.name + "_exerted"
+          addVariable(eventName, power.name + ".state=inEffect", "Event", null)
+          addSituation(power.name + "_exertion", generatePowerProposition(power.name, eventName))
+          
+          if(situations.get(oblName) === null) {          
+            propositions.put(oblName, generatePowerProposition(power.name, eventName))
+          }
+          else
+            propositions.put(oblName, propositions.get(oblName) + '|' + generatePowerProposition(power.name, eventName))
+        }
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_termination"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + "._holds")     
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateObligationViolatedSituation (Model model) {
+    var Map<String, String> violations = new HashMap<String, String>()
+      
+    for(obligation: model.obligations) {
+      val violation = generateViolateExpireString(obligation.name, obligation.consequent)
+      if (violation !== null){
+        var situationName = obligation.name + "_violated"
+        addSituation(situationName, violation)
+        violations.put(obligation.name, situationName + "._holds")
+      }     
+      
+      /*var consEvents = obligationConsequentEvents.get(obligation)
+      var consequent = ""
+      if(consEvents !== null)
+        for(e : consEvents) {
+          var ev = getEvent(e.predicateFunction)
+          if (consequent != "")
+            consequent += " & "
+          consequent += "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer)))"
+        }
+        var situationName = obligation.name + "_violated"
+        addSituation(situationName, consequent)
+        violations.put(obligation.name, situationName + ".state = holds")*/
+    }   
+    
+    for(obligation: model.survivingObligations) {
+      val violation = generateViolateExpireString(obligation.name, obligation.consequent)
+      if (violation !== null){
+        var situationName = obligation.name + "_violated"
+        addSituation(situationName, violation)
+        violations.put(obligation.name, situationName + "._holds")
+      }     
+      
+      /*var consEvents = obligationConsequentEvents.get(obligation)
+      var consequent = ""
+      if(consEvents !== null)
+        for(e : consEvents) {
+          var ev = getEvent(e.predicateFunction)
+          if (consequent != "")
+            consequent += " & "
+          consequent += "(" + ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer)))"
+        }
+        var situationName = obligation.name + "_violated"
+        addSituation(situationName, consequent)
+        violations.put(obligation.name, situationName + ".state = holds")*/
+    } 
+    
+    return violations
+  }
+  
+  def Map<String, String> generateObligationExpiredSituation (Model model) {
+    var Map<String, String> expirations = new HashMap<String, String>()
+      
+    for(obligation: model.obligations) {
+      val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
+      if (expiration !== null){
+        var situationName = obligation.name + "_expired"
+        addSituation(situationName, expiration)
+        expirations.put(obligation.name, situationName + "._holds")
+      }
+      
+      /*var  antEvents = obligationAntecedentEvents.get(obligation)
+      if(antEvents !== null)
+        for(e : antEvents) {
+          var ev = getEvent(e.predicateFunction)
+          var situationName = obligation.name + "_expired"
+          addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer))")
+          expirations.put(obligation.name, situationName + ".state = holds")
+        }*/
+    } 
+    
+    for(obligation: model.survivingObligations) {
+      val expiration = generateViolateExpireString(obligation.name, obligation.antecedent)
+      if (expiration !== null){
+        var situationName = obligation.name + "_expired"
+        addSituation(situationName, expiration)
+        expirations.put(obligation.name, situationName + "._holds")
+      }
+      
+      /*var  antEvents = obligationAntecedentEvents.get(obligation)
+      if(antEvents !== null)
+        for(e : antEvents) {
+          var ev = getEvent(e.predicateFunction)
+          var situationName = obligation.name + "_expired"
+          addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + obligation.name + "_debtor._name & " + obligation.name + "_debtor._is_performer))")
+          expirations.put(obligation.name, situationName + ".state = holds")
+        }*/
+    }   
+    
+    return expirations
+  }
+  
+  def Map<String, String> generatePowerExpiredSituation (Model model) {
+    var Map<String, String> expirations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      val expiration = generateViolateExpireString(power.name, power.antecedent)
+      if (expiration !== null){
+        var situationName = power.name + "_expired"
+        addSituation(situationName, expiration)
+        expirations.put(power.name, situationName + "._holds")
+      }
+      
+      
+      /*var  antEvents = powerAntecedentEvents.get(power)
+      if(antEvents !== null)
+        for(e : antEvents) {
+          var ev = getEvent(e.predicateFunction)
+          var situationName = power.name + "_expired"
+          addSituation(situationName, ev + ".event._expired | ("+ ev + ".event._happened & !(" + ev + ".event.performer = " + power.name + "_debtor._name & " + power.name + "_debtor._is_performer))")
+          expirations.put(power.name, situationName + ".state = holds")
+        }*/
+    }   
+    
+    return expirations
+  }
+  
+  def Map<String, String> generatePowerExertedSituation (Model model) {
+    var Map<String, String> exertion = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      var situationName = power.name + "_exertion._holds"
+      exertion.put(power.name, situationName)
+    }   
+    
+    return exertion
+  }
+  
+  def Map<String, String> generateAntecedentsSituation (Model model) {
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(obligation: model.obligations) {
+      val antecedent = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.ANTECEDENT, obligation.antecedent)
+      if(antecedent !== null && antecedent != "TRUE") {
+        val sname = obligation.name + "_antecedent"
+        addSituation(sname, antecedent)
+        situations.put(obligation.name, sname + "._holds")      
+      }
+    }
+    
+    for(obligation: model.survivingObligations) {
+      val antecedent = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.ANTECEDENT, obligation.antecedent)
+      if(antecedent !== null && antecedent != "TRUE") {
+        val sname = obligation.name + "_antecedent"
+        addSituation(sname, antecedent)
+        situations.put(obligation.name, sname + "._holds")      
+      }
+    }
+    
+    for(power: model.powers) {
+      val antecedent = generatePropositionString(power.name, normType.POWER, propositionType.ANTECEDENT, power.antecedent)
+      if(antecedent !== null && antecedent != "TRUE") {
+        val sname = power.name + "_antecedent"
+        addSituation(sname, antecedent)
+        situations.put(power.name, sname + "._holds")
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateConsequentsSituation (Model model) {
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(obligation: model.obligations) {
+      val sname = obligation.name + "_consequent"
+      addSituation(sname, generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.CONSEQUENT, obligation.consequent))
+      situations.put(obligation.name, sname + "._holds")
+    }
+    
+    for(obligation: model.survivingObligations) {
+      val sname = obligation.name + "_consequent"
+      addSituation(sname, generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.CONSEQUENT, obligation.consequent))
+      situations.put(obligation.name, sname + "._holds")
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generateTriggersSituation (Model model) {
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(obligation: model.obligations) {
+      val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
+      
+      if(trigger !== null && trigger != 'TRUE') {
+        val sname = obligation.name + "_trigger"
+        addSituation(sname, trigger)
+        situations.put(obligation.name, sname + "._holds")      
+      }
+    }
+    
+    for(obligation: model.survivingObligations) {
+      val trigger = generatePropositionString(obligation.name, normType.OBLIGATION, propositionType.TRIGGER, obligation.trigger)
+      
+      if(trigger !== null && trigger != 'TRUE') {
+        val sname = obligation.name + "_trigger"
+        addSituation(sname, trigger)
+        situations.put(obligation.name, sname + "._holds")      
+      }
+    }
+    
+    for(power: model.powers) {
+      val trigger = generatePropositionString(power.name, normType.POWER, propositionType.TRIGGER, power.trigger)
+      val sname = power.name + "_trigger"
+      if(trigger !== null && trigger != 'TRUE') {
+        addSituation(sname, trigger)
+        situations.put(power.name, sname + "._holds")     
+      }
+    }
+    
+    return situations
+  }
+  
+  
+/*  def Map<String, String> generatePowersSuspensionSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFPowerSuspended) {
+        //var oblName = power.consequent.norm   get an error!
+        var powName = "delivery"
+        var eventName = "suspension_" + powName
+        addEvent(eventName, power.name + ".state=inEffect", null, null)
+        
+        if(situations.get(powName) == null) {         
+          propositions.put(powName, generatePowerProposition(power.name, eventName))
+        }
+        else
+          propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))            
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_suspension"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + ".state=holds")      
+      }
+    }
+    
+    return situations
+  }*/
+  
+  /*def Map<String, String> generatePowersResumptionSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFPowerResumed) {
+        //var oblName = power.consequent.norm   get an error!
+        var powName = "delivery"
+        var eventName = "resumption_" + powName
+        addEvent(eventName, power.name + ".state=inEffect")
+        
+        if(situations.get(powName) == null) {         
+          propositions.put(powName, generatePowerProposition(power.name, eventName))
+        }
+        else
+          propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))            
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_resumption"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + ".state=holds")      
+      }
+    }
+    
+    return situations
+  }
+  
+  def Map<String, String> generatePowerwTerminationSituation (Model model) {
+    var Map<String, String> propositions = new HashMap<String, String>()
+    var Map<String, String> situations = new HashMap<String, String>()
+      
+    for(power: model.powers) {
+      if(power.consequent instanceof PFPowerTerminated) {
+        //var oblName = power.consequent.norm   get an error!
+        var powName = "delivery"
+        var eventName = "termination_" + powName
+        addEvent(eventName, power.name + ".state=inEffect")
+        
+        if(situations.get(powName) == null) {         
+          propositions.put(powName, generatePowerProposition(power.name, eventName))
+        }
+        else
+          propositions.put(powName, propositions.get(powName) + '|' + generatePowerProposition(power.name, eventName))            
+      }
+    }     
+    
+    for(Map.Entry<String, String> entry : propositions.entrySet()) {
+      if(entry.value.length > 0) {
+        var situationName = entry.getKey() + "_termination"
+        addSituation(situationName, entry.getValue())
+        situations.put(entry.getKey(), situationName + ".state=holds")      
+      }
+    }
+    
+    return situations
+  }*/
+  
+  def List<PAtomPredicate> collectPropositionEvents(Proposition proposition){
+    val list = new ArrayList<PAtomPredicate>
+    switch (proposition){
+      POr: {
+        list.addAll(collectPropositionEvents(proposition.left))
+        list.addAll(collectPropositionEvents(proposition.right))
+      } 
+      PAnd: {
+        list.addAll(collectPropositionEvents(proposition.left))
+        list.addAll(collectPropositionEvents(proposition.right))
+      } 
+      PEquality: {
+        list.addAll(collectPropositionEvents(proposition.left))
+        list.addAll(collectPropositionEvents(proposition.right))
+      } 
+      PComparison: {
+        list.addAll(collectPropositionEvents(proposition.left))
+        list.addAll(collectPropositionEvents(proposition.right))
+      } 
+      PAtomRecursive: list.addAll(collectPropositionEvents(proposition.inner))
+      NegatedPAtom: list.addAll(collectPropositionEvents(proposition.negated))
+      PAtomPredicate: list.add(proposition)
+//      PAtomEnum:
+//      PAtomVariable: 
+//      PAtomPredicateTrueLiteral: 
+//      PAtomPredicateFalseLiteral: 
+//      PAtomIntLiteral: 
+//      PAtomStringLiteral: 
+    }
+    return list
+  }
+  
+  def static String generateDotExpressionString (Ref argRef, String thisString) {
+    val ids = new ArrayList<String>()
+    var ref = argRef
+    while (ref instanceof VariableDotExpression){
+      ids.add(ref.tail.name)
+      ref = ref.ref 
+    }
+    if (ref instanceof VariableRef) {
+      ids.add((ref as VariableRef).variable)  
+    }
+    if (thisString !== null)
+      ids.add(thisString)
+    
+    var revIds = ids.reverse()
+    var expression = ""
+    for(id : revIds)
+      if(expression === ""){
+        expression = id
+      } else {
+        expression += "." + id
+      }
+        
+    return expression
+  }
+  
+  def String extractEventVariableString(Event event){
+    switch (event){
+      VariableEvent: return generateDotExpressionString(event.variable, null)
+      PowerEvent: return '''«event.eventName.toLowerCase»'''
+      ObligationEvent: return '''«event.eventName.toLowerCase»'''
+      ContractEvent: return '''«event.eventName.toLowerCase»'''
+    } 
+  }
+  
+  def String getEqualityOperator(String op) { 
+    switch (op) {
+      case '!=': return '!=='
+      case '==': return '==='
+    }
+  }
+  
+  def String inverseOperator(String op) { 
+    switch (op) {
+      case '!=': return '==='
+      case '==': return '!=='
+      case '>': return '<='
+      case '<': return '>='
+      case '>=': return '<'
+      case '<=': return '>'
+    }
+  }
+  
+  def String getHappensPredicateVarName(PredicateFunction it) {
+    if(it instanceof PredicateFunctionWHappensBefore){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateDotExpressionString(pexp.variable, null)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+                PointAtomObligationEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.obligationEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2                 
+                }
+                PointAtomPowerEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.powerEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+                PointAtomContractEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.contractEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+              }
+         }
+         
+          if(it instanceof PredicateFunctionSHappensBefore){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateDotExpressionString(pexp.variable, null)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+                PointAtomObligationEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.obligationEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2                 
+                }
+                PointAtomPowerEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.powerEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+                PointAtomContractEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.contractEvent)
+                  return "hbefore_" + eventN1 + "_" + eventN2
+                }
+              }
+         }
+         
+         if(it instanceof PredicateFunctionHappensAfter){
+            val point = it.point
+              val pexp = point.pointExpression
+              switch (pexp) {
+                PointAtomParameterDotExpression: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateDotExpressionString(pexp.variable, null)
+                  return "hafter_" + eventN1 + "_" + eventN2
+                }
+                PointAtomObligationEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.obligationEvent)
+                  return "hafter_" + eventN1 + "_" + eventN2                  
+                }
+                PointAtomPowerEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.powerEvent)
+                  return "hafter_" + eventN1 + "_" + eventN2
+                }
+                PointAtomContractEvent: {
+                  val eventN1 = generateEventVariableString(it.event)
+                  val eventN2 = generateEventVariableString(pexp.contractEvent)
+                  return "hafter_" + eventN1 + "_" + eventN2
+                }
+              }
+         }
+  }
+  
+  // challenge: convert Happens(violated(obligation)) to a situation
+  def String generatePredicateFunctionString(String normName, normType nType, propositionType pType, PredicateFunction predicate){    
+    switch (predicate){
+      PredicateFunctionHappens: {
+              predicates.add(new SymboleoPredicate(predicateType.HAPPENS, extractEventVariableString(predicate.event)))
+              switch (predicate.event) {
+                  VariableEvent: return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''
+                  PowerEvent: return '''«generateEventVariableString(predicate.event)»'''
+                  ObligationEvent: return '''«generateEventVariableString(predicate.event)»'''    
+                  ContractEvent: return '''«generateEventVariableString(predicate.event)»'''
+                }               
+              }
+      PredicateFunctionWHappensBefore: {  
+        
+        return getHappensPredicateVarName(predicate) + "._true" 
+          
+        //val constraint = generateConstraint(predicate)  
+        //val event1 = extractEventVariableString(predicate.event)
+//        return "HeppensBefore(" + event + ".state = active & next(" + event + ".state) = happened", 
+        //predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, event1, predicate.point.pointExpression))
+        //if(constraint !== null)
+        //  return '''«generateProposition(normName, nType, pType, event1)» & «constraint»'''   
+        //return '''«generateProposition(normName, nType, pType, event1)»'''
 
-	       		//			val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
-				//return "hbefore_" + event1 + "_" + predicate.point.pointExpression + "._happened"	
-			}
-			
-			PredicateFunctionSHappensBefore: {	
-				
-				return getHappensPredicateVarName(predicate) + "._true"	
-					
-				//val constraint = generateConstraint(predicate)	
-				//val event1 = extractEventVariableString(predicate.event)
-//				return "HeppensBefore(" + event + ".state = active & next(" + event + ".state) = happened", 
-				//predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, event1, predicate.point.pointExpression))
-				//if(constraint !== null)
-				//	return '''�generateProposition(normName, nType, pType, event1)� & �constraint�'''		
-				//return '''�generateProposition(normName, nType, pType, event1)�'''
+            //      val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
+        //return "hbefore_" + event1 + "_" + predicate.point.pointExpression + "._happened" 
+      }
+      
+      PredicateFunctionSHappensBefore: {  
+        
+        return getHappensPredicateVarName(predicate) + "._true" 
+          
+        //val constraint = generateConstraint(predicate)  
+        //val event1 = extractEventVariableString(predicate.event)
+//        return "HeppensBefore(" + event + ".state = active & next(" + event + ".state) = happened", 
+        //predicates.add(new SymboleoPredicate(predicateType.HAPPENSBEFORE, event1, predicate.point.pointExpression))
+        //if(constraint !== null)
+        //  return '''«generateProposition(normName, nType, pType, event1)» & «constraint»'''   
+        //return '''«generateProposition(normName, nType, pType, event1)»'''
 
-	       		//			val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
-				//return "hbefore_" + event1 + "_" + predicate.point.pointExpression + "._happened"	
-			}
-			
-			PredicateFunctionHappensAfter: {
-				/*val constraint = generateConstraint(predicate)
-				val event1 = extractEventVariableString(predicate.event)
-				predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, event1, predicate.point.pointExpression))
-				if(constraint !== null)
-					return '''�generateProposition(normName, nType, pType, event1)� & �constraint�'''		
-				return '''�generateProposition(normName, nType, pType, event1)�'''	*/
-				return getHappensPredicateVarName(predicate) + "._true"				
-			}
-			PredicateFunctionHappensWithin: {					
-					//predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
-					//return '''�generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))�'''
-					
-					if (predicate.interval instanceof IntervalFunction) {
-						val pi = predicate.interval
-						val pe = pi.intervalExpression
-						if (pe instanceof IntervalFunction) {
-							val pa1 = pe.arg1
-							val pa2 = pe.arg2
-							predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
-						}
-						return '''�generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))�'''											
-					}
-					else if(predicate.interval instanceof SituationExpression) {
-						//predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
-						val ie = predicate.interval.intervalExpression
-						if(ie instanceof SituationExpression){									
-							val situation = ie.situation
-							 
-					        switch (situation) {
-					          ObligationState: return '''�addHappensWith( generateEventVariableString(predicate.event), situation.obligationVariable.name+".state = " + situation.stateName)�'''
-					          PowerState: return '''�addHappensWith(generateEventVariableString(predicate.event), situation.powerVariable.name+".state = " + situation.stateName)�'''
-					          ContractState: return '''�addHappensWith(generateEventVariableString(predicate.event), "cnt.state = "+ situation.stateName)�'''
-					        }
-						
-							return '''HappensWithin(�predicate.event�, �predicate.interval�)'''	
-						}
-					}			
-				}
-			PredicateFunctionIsEqual: {
-				return predicate.arg1 + " = " + predicate.arg2
-			}
-			PredicateFunctionIsOwner: {
-				return predicate.arg1 + "._owner = " + predicate.arg2 + ".role._party"
-			}
-			PredicateFunctionCannotBeAssigned: {
-				// not implemented
-				pcAssignProhibitedNorms.add(predicate.arg1)
-				return null
-			}
-		}	
-	}
-	
-	def String generatePropositionString(String normName, normType nType, propositionType pType, Proposition proposition){
-		switch (proposition){
-			POr: return generatePropositionString(normName, nType, pType, proposition.left) + " | " + generatePropositionString(normName, nType, pType, proposition.right) 
-			PAnd: return generatePropositionString(normName, nType, pType, proposition.left) + " & " + generatePropositionString(normName, nType, pType, proposition.right) 
-			PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
-			PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
-			PAtomRecursive: return "(" + generatePropositionString(normName, nType, pType, proposition.inner) + ")"
-			NegatedPAtom: return "!(" + generatePropositionString(normName, nType, pType, proposition.negated) + ")"
-			PAtomPredicate: return generatePredicateFunctionString(normName, nType, pType, proposition.predicateFunction)
-			PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
-			PAtomVariable: return generateDotExpressionString(proposition.variable, null)
-			PAtomPredicateTrueLiteral: return "TRUE"
-			PAtomPredicateFalseLiteral: return "FALSE" 
-			PAtomDoubleLiteral: return proposition.value.toString
-			PAtomIntLiteral: return proposition.value.toString
-			PAtomStringLiteral: return proposition.value
-		}
-	}
-	
-	def Boolean isEvent(String ev) {
-		for(e:eventVariables) {
-			if(e.name.equals(ev))
-				return true
-		}
-		return false
-	}
-	
-	def String generateConstraint(PredicateFunction predicate) {
-		switch (predicate){
-			PredicateFunctionHappens: {
-				return null
-			}				
-			PredicateFunctionSHappensBefore: {
-				val expression= predicate.point.pointExpression
-				if(expression instanceof PointAtomParameterDotExpression){
-					val event2 = generateDotExpressionString(expression.variable, null)
-					if(isEvent(event2))
-						return "!(" + event2 + ".event._happened" + ")"
-				}	
-				return null
-			}
-			
-			PredicateFunctionWHappensBefore: {
-				val expression= predicate.point.pointExpression
-				if(expression instanceof PointAtomParameterDotExpression){
-					val event2 = generateDotExpressionString(expression.variable, null)
-					if(isEvent(event2))
-						return "!(" + event2 + ".event._happened" + ")"
-				}	
-				return null
-			}
-			
-			PredicateFunctionHappensAfter: {
-				val expression= predicate.point.pointExpression
-				if(expression instanceof PointAtomParameterDotExpression){
-					val event2 = generateDotExpressionString(expression.variable, null)
-					if(isEvent(event2))
-						return "(" + event2 + ".event._happened" + ")"					
-				}			
-				return null
-			}
-			PredicateFunctionHappensWithin: {
-				return null
-			}
-		}
-	}
-	
-	def String generateExpressionString(Expression argExpression, String thisString) {
-		switch (argExpression){
-			Or: return generateExpressionString(argExpression.left, thisString) + " || " + generateExpressionString(argExpression.right, thisString)
-			And: return generateExpressionString(argExpression.left, thisString) + " && " + generateExpressionString(argExpression.right, thisString)
-			Equality: return  generateExpressionString(argExpression.left, thisString) + getEqualityOperator(argExpression.op) + generateExpressionString(argExpression.right, thisString)
-			Comparison: return generateExpressionString(argExpression.left, thisString) + argExpression.op + generateExpressionString(argExpression.right, thisString)
-			Plus: return generateExpressionString(argExpression.left, thisString) + " + " + generateExpressionString(argExpression.right, thisString)
-			Minus: return generateExpressionString(argExpression.left, thisString) + " - " + generateExpressionString(argExpression.right, thisString)
-			Multi: return generateExpressionString(argExpression.left, thisString) + " * " + generateExpressionString(argExpression.right, thisString)
-			Div: return generateExpressionString(argExpression.left, thisString) + " / " + generateExpressionString(argExpression.right, thisString)
-			PrimaryExpressionRecursive: return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
-			PrimaryExpressionFunctionCall: return generateFunctionCall(argExpression, thisString)
-			NegatedPrimaryExpression: return "!(" + generateExpressionString(argExpression.expression, thisString) + ")"
-			AtomicExpressionTrue: return "true"
-			AtomicExpressionFalse: return "false"
-			AtomicExpressionDouble: return argExpression.value.toString()
-			AtomicExpressionInt: return argExpression.value.toString()
-			AtomicExpressionEnum: return argExpression.enumeration + "." + argExpression.enumItem
-			AtomicExpressionString: return argExpression.value
-			AtomicExpressionParameter: return generateDotExpressionString(argExpression.value, null)
-		}
-	}
+            //      val pair2 = new Pair("event2", generateDotExpressionString(pexp.variable, null))
+        //return "hbefore_" + event1 + "_" + predicate.point.pointExpression + "._happened" 
+      }
+      
+      PredicateFunctionHappensAfter: {
+        /*val constraint = generateConstraint(predicate)
+        val event1 = extractEventVariableString(predicate.event)
+        predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, event1, predicate.point.pointExpression))
+        if(constraint !== null)
+          return '''«generateProposition(normName, nType, pType, event1)» & «constraint»'''   
+        return '''«generateProposition(normName, nType, pType, event1)»'''  */
+        return getHappensPredicateVarName(predicate) + "._true"       
+      }
+      PredicateFunctionHappensWithin: {         
+          //predicates.add(new SymboleoPredicate(predicateType.HAPPENSAFTER, extractEventVariableString(predicate.event), predicate.point.pointExpression))
+          //return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''
+          
+          if (predicate.interval instanceof IntervalFunction) {
+            val pi = predicate.interval
+            val pe = pi.intervalExpression
+            if (pe instanceof IntervalFunction) {
+              val pa1 = pe.arg1
+              val pa2 = pe.arg2
+              predicates.add(new SymboleoPredicate(predicateType.HAPPENSWITHIN, extractEventVariableString(predicate.event), pa1, pa2))
+            }
+            return '''«generateProposition(normName, nType, pType, generateEventVariableString(predicate.event))»'''                      
+          }
+          else if(predicate.interval instanceof SituationExpression) {
+            //predicates.add(new SymboleoPredicate("HappensWithin", predicate.event, predicate.interval))
+            val ie = predicate.interval.intervalExpression
+            if(ie instanceof SituationExpression){                  
+              val situation = ie.situation
+               
+                  switch (situation) {
+                    ObligationState: return '''«addHappensWith( generateEventVariableString(predicate.event), situation.obligationVariable.name+".state = " + situation.stateName)»'''
+                    PowerState: return '''«addHappensWith(generateEventVariableString(predicate.event), situation.powerVariable.name+".state = " + situation.stateName)»'''
+                    ContractState: return '''«addHappensWith(generateEventVariableString(predicate.event), "cnt.state = "+ situation.stateName)»'''
+                  }
+            
+              return '''HappensWithin(«predicate.event», «predicate.interval»)''' 
+            }
+          }     
+        }
+      PredicateFunctionIsEqual: {
+        return predicate.arg1 + " = " + predicate.arg2
+      }
+      PredicateFunctionIsOwner: {
+        return predicate.arg1 + "._owner = " + predicate.arg2 + ".role._party"
+      }
+      PredicateFunctionCannotBeAssigned: {
+        // not implemented
+        pcAssignProhibitedNorms.add(predicate.arg1)
+        return null
+      }
+    } 
+  }
+  
+  def String generatePropositionString(String normName, normType nType, propositionType pType, Proposition proposition){
+    switch (proposition){
+      POr: return generatePropositionString(normName, nType, pType, proposition.left) + " | " + generatePropositionString(normName, nType, pType, proposition.right) 
+      PAnd: return generatePropositionString(normName, nType, pType, proposition.left) + " & " + generatePropositionString(normName, nType, pType, proposition.right) 
+      PEquality: return generatePropositionString(normName, nType, pType, proposition.left) + getEqualityOperator(proposition.op) + generatePropositionString(normName, nType, pType, proposition.right) 
+      PComparison: return generatePropositionString(normName, nType, pType, proposition.left) + proposition.op + generatePropositionString(normName, nType, pType, proposition.right)
+      PAtomRecursive: return "(" + generatePropositionString(normName, nType, pType, proposition.inner) + ")"
+      NegatedPAtom: return "!(" + generatePropositionString(normName, nType, pType, proposition.negated) + ")"
+      PAtomPredicate: return generatePredicateFunctionString(normName, nType, pType, proposition.predicateFunction)
+      PAtomEnum: return proposition.enumeration + "." + proposition.enumItem
+      PAtomVariable: return generateDotExpressionString(proposition.variable, null)
+      PAtomPredicateTrueLiteral: return "TRUE"
+      PAtomPredicateFalseLiteral: return "FALSE" 
+      PAtomDoubleLiteral: return proposition.value.toString
+      PAtomIntLiteral: return proposition.value.toString
+      PAtomStringLiteral: return proposition.value
+    }
+  }
+  
+  def Boolean isEvent(String ev) {
+    for(e:eventVariables) {
+      if(e.name.equals(ev))
+        return true
+    }
+    return false
+  }
+  
+  def String generateConstraint(PredicateFunction predicate) {
+    switch (predicate){
+      PredicateFunctionHappens: {
+        return null
+      }       
+      PredicateFunctionSHappensBefore: {
+        val expression= predicate.point.pointExpression
+        if(expression instanceof PointAtomParameterDotExpression){
+          val event2 = generateDotExpressionString(expression.variable, null)
+          if(isEvent(event2))
+            return "!(" + event2 + ".event._happened" + ")"
+        } 
+        return null
+      }
+      
+      PredicateFunctionWHappensBefore: {
+        val expression= predicate.point.pointExpression
+        if(expression instanceof PointAtomParameterDotExpression){
+          val event2 = generateDotExpressionString(expression.variable, null)
+          if(isEvent(event2))
+            return "!(" + event2 + ".event._happened" + ")"
+        } 
+        return null
+      }
+      
+      PredicateFunctionHappensAfter: {
+        val expression= predicate.point.pointExpression
+        if(expression instanceof PointAtomParameterDotExpression){
+          val event2 = generateDotExpressionString(expression.variable, null)
+          if(isEvent(event2))
+            return "(" + event2 + ".event._happened" + ")"          
+        }     
+        return null
+      }
+      PredicateFunctionHappensWithin: {
+        return null
+      }
+    }
+  }
+  
+  def String generateExpressionString(Expression argExpression, String thisString) {
+    switch (argExpression){
+      Or: return generateExpressionString(argExpression.left, thisString) + " || " + generateExpressionString(argExpression.right, thisString)
+      And: return generateExpressionString(argExpression.left, thisString) + " && " + generateExpressionString(argExpression.right, thisString)
+      Equality: return  generateExpressionString(argExpression.left, thisString) + getEqualityOperator(argExpression.op) + generateExpressionString(argExpression.right, thisString)
+      Comparison: return generateExpressionString(argExpression.left, thisString) + argExpression.op + generateExpressionString(argExpression.right, thisString)
+      Plus: return generateExpressionString(argExpression.left, thisString) + " + " + generateExpressionString(argExpression.right, thisString)
+      Minus: return generateExpressionString(argExpression.left, thisString) + " - " + generateExpressionString(argExpression.right, thisString)
+      Multi: return generateExpressionString(argExpression.left, thisString) + " * " + generateExpressionString(argExpression.right, thisString)
+      Div: return generateExpressionString(argExpression.left, thisString) + " / " + generateExpressionString(argExpression.right, thisString)
+      PrimaryExpressionRecursive: return "(" + generateExpressionString(argExpression.inner, thisString) + ")"
+      PrimaryExpressionFunctionCall: return generateFunctionCall(argExpression, thisString)
+      NegatedPrimaryExpression: return "!(" + generateExpressionString(argExpression.expression, thisString) + ")"
+      AtomicExpressionTrue: return "true"
+      AtomicExpressionFalse: return "false"
+      AtomicExpressionDouble: return argExpression.value.toString()
+      AtomicExpressionInt: return argExpression.value.toString()
+      AtomicExpressionEnum: return argExpression.enumeration + "." + argExpression.enumItem
+      AtomicExpressionString: return argExpression.value
+      AtomicExpressionParameter: return generateDotExpressionString(argExpression.value, null)
+    }
+  }
 
-	def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
-		val functionCall = argFunctionCallExp.function
-		switch (functionCall) {
-			TwoArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
-			OneArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
-			TwoArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
-			OneArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
-		}
-	}
-	
-	// Generate generic modules
-	def String generateStaticModules () {
-		val code = '''
-		MODULE Timer(start)
-		 VAR active1  : boolean;
-		     expired1 : boolean;
-		 ASSIGN
-		   init(active1) := start;
-		   next(active1) := (active1 | start) ? TRUE : active1;
-		   init(expired1) :=  active1 ? {TRUE,FALSE} : FALSE;
-		   next(expired1) :=  case
-		           active1 & !expired1 : {TRUE,FALSE};
-		           expired1           : TRUE;
-		           TRUE              : FALSE;
-		       esac;
-		
-		MODULE Event(start)
-		 DEFINE _inactive := (state = inactive);
-		        _happened := (state = happened);
-		        _expired  := (state = expired);
-		 VAR triggered : boolean;
-		         timer : Timer(start & !_happened & !_expired);
-		         state : {inactive, active, happened, expired};
-				 performer	: {"CBEEF", "COSTCO"};
-		
-		 ASSIGN
-			next(performer)	:= case
-				state=active & start	: {"CBEEF", "COSTCO"};
-				TRUE	 				: performer;
-			esac;
-		 ASSIGN
-		  init(triggered) := FALSE;
-		  next(triggered) := (state=active & start) ? {FALSE,TRUE} : FALSE;
-		  init(state)     := inactive;
-		  next(state)     := case
-		    state=inactive & start                          : active;
-		    state=active & start & triggered &
-									timer.active1 : happened;
-			state=active & start & timer.expired1 : expired;
-		    TRUE                                            : state;
-		  esac;
-		
-		--------------------------------------------------------------------------------------
-		-- 'name' is party name
-		-- 'removeL/R/P' releases liability, righHolder or performer position of a party
-		-- 'addL/R/P' adds liability, righHolder or performer position to a party
-		--------------------------------------------------------------------------------------
-		MODULE Party(norm, name, removeL, addL, removeR, addR, removeP, addP)
-		  DEFINE
-			_name 			:= name;
-			_norm			:= norm;
-			_is_performer	:= p_state=P;
-			_is_liable		:= l_state=L;
-			_is_rightHolder	:= r_state=R;
-		
-		  VAR
-			l_state	: {Init, L};
-			r_state	: {Init, R};
-			p_state	: {Init, P};
-		
-		  ASSIGN
-			init(l_state) := Init;
-			next(l_state)	:= case
-				l_state=Init & addL	: L;
-				l_state=L &removeL	: Init;
-				TRUE				: l_state;
-			esac;
-		
-		  ASSIGN
-			init(r_state) := Init;
-			next(r_state)	:= case
-				r_state=Init & addR	: R;
-				r_state=R & removeR : Init;
-				TRUE				: r_state;
-			esac;
-		
-		  ASSIGN
-			init(p_state) := Init;
-			next(p_state)	:= case
-				p_state=Init & addP : P;
-				p_state=P & removeP	: Init;
-				TRUE				: p_state;
-			esac;
-		
-		  INVAR
-			!(addL & removeL) &
-			!(addR & removeR) &
-			!(addP & removeP) &
-			!(_is_rightHolder & _is_liable);
-		
-		--------------------------------------------------------------------------------------
-		-- 'cnt_in_effect'    indicates if the contract is in inEffect state
-		-- 'power_suspended'  indicates if a power suspends the obligation
-		-- 'cnt_suspended'    indicates if the contract suspension suspends the obligation
-		-- 'power_resumed'    indicates if a power resumption resumes the obligation
-		-- 'cnt_resumed'      indicates if the contract resumption resumes the obligation
-		--------------------------------------------------------------------------------------
-		MODULE Obligation(name, surviving, cnt_in_effect, cnt_untermination,
-		                  fulfilled, triggered, violated, activated,
-						  expired1, power_suspended, cnt_suspended, terminated, power_resumed,
-						  cnt_resumed, discharged, antecedent)
-		  DEFINE
-			_name 		:= name;
-			_surviving	:= surviving;
-			_suspended 	:= (power_suspended | (cnt_suspended & !surviving));
-			_active 	:= (state = inEffect | state = suspension);
-		
-		  VAR
-			state 		: {not_created, create, inEffect, suspension, discharge,
-						   fulfillment, violation, unsTermination};
-			sus_state	: {not_suspended, sus_by_contract, sus_by_power};
-		
-		  ASSIGN
-		 --NEW: update axioms(surviving obligations are not suspended! informally mentioned)
-			init(sus_state) := not_suspended;
-			next(sus_state)	:= case
-				sus_state=not_suspended & !surviving & cnt_suspended 	: sus_by_contract;
-				sus_state=sus_by_contract & !surviving & cnt_resumed	: not_suspended;
-				sus_state=not_suspended & !surviving & power_suspended 	: sus_by_power;
-				sus_state=sus_by_power & !surviving & power_resumed		: not_suspended;
-				TRUE													: sus_state;
-			esac;
-		
-		  ASSIGN
-		    init(state) := not_created;
-		    next(state) := case
-				cnt_in_effect & state=not_created   & triggered & !antecedent : create;
-				cnt_in_effect & state=not_created   & triggered & antecedent  : inEffect;
-				cnt_in_effect & state=create        & antecedent              : inEffect;
-				cnt_in_effect & state=create        & (expired1 | discharged)  : discharge;
-				cnt_in_effect & state=inEffect      & fulfilled               : fulfillment;
-				cnt_in_effect & state=inEffect      & _suspended              : suspension;
-				cnt_in_effect & state=inEffect      & violated                : violation;
-				cnt_in_effect & _active            	& terminated              : unsTermination;
-				cnt_untermination & !surviving  	& _active           	  : unsTermination;
-				sus_state=sus_by_contract & state=suspension  & cnt_resumed   : inEffect;
-				sus_state=sus_by_power	  & state=suspension  & power_resumed   : inEffect;
-				TRUE                                                          : state;
-		  esac;
-		
-		--------------------------------------------------------------------------------------
-		-- 'cnt_in_effect'   indicates if the contract is in inEffect state
-		-- 'power_suspended' indicates if a power suspends the power
-		-- 'cnt_suspended'   indicates if the contract suspension suspends the power
-		-- 'power_resumed'   indicates if a power resumption resumes the power
-		-- 'cnt_resumed'     indicates if the contract resumption resumes the power
-		--------------------------------------------------------------------------------------
-		MODULE Power(name, cnt_in_effect, triggered, activated, expired1, power_suspended, cnt_suspended,
-		       	     terminated, exerted, power_resumed, cnt_resumed, antecedent)
-		  DEFINE
-			_name		 := name;
-			_active 	 := (state = inEffect | state = suspension);
-			_suspended 	 := (power_suspended | cnt_suspended);
-		
-		  VAR
-			state 		: {not_created, create, inEffect, suspension, sTermination, unsTermination};
-			sus_state	: {not_suspended, sus_by_contract, sus_by_power};
-		
-		  ASSIGN
-			init(sus_state) := not_suspended;
-			next(sus_state)	:= case
-				sus_state=not_suspended & cnt_suspended 	: sus_by_contract;
-				sus_state=sus_by_contract & cnt_resumed		: not_suspended;
-				sus_state=not_suspended & power_suspended 	: sus_by_power;
-				sus_state=sus_by_power & power_resumed		: not_suspended;
-				TRUE										: sus_state;
-			esac;
-		
-		  ASSIGN
-		   init(state) := not_created;
-		   next(state) := case
-		     cnt_in_effect & state = not_created 	& triggered & !antecedent : create;
-		     cnt_in_effect & state = not_created 	& triggered & antecedent  : inEffect;
-		     cnt_in_effect & state = create      	& antecedent              : inEffect;
-		     cnt_in_effect & state = create      	& expired1                : unsTermination;
-		     cnt_in_effect & state = inEffect    	& exerted                 : sTermination;
-		     cnt_in_effect & state = inEffect   	& _suspended              : suspension;
-		     cnt_in_effect & state = inEffect    	& expired1                : unsTermination;
-			 cnt_in_effect & _active  			 	& terminated              : unsTermination;
-		
-			 sus_state=sus_by_contract & state=suspension  & cnt_resumed 	  : inEffect;
-			 sus_state=sus_by_power	   & state=suspension  & power_resumed      : inEffect;
-		
-		     TRUE                                          				   	  : state;
-		   esac;
-		
-		--------------------------------------------------------------------------------------
-		-- 'assigned_party'				 indicates if a party is assigned to a role
-		-- 'revoked_party'				 indicates if a party is unassigned from a role
-		-- 'fulfilled_active_obligation' indicates if all active obligations are fulfilled
-		--------------------------------------------------------------------------------------
-		MODULE Contract(triggered, activated, terminated, suspended, resumed,
-						revoked_party, assigned_party, fulfilled_active_obligation)
-		  DEFINE
-			_active 	 := (state = unassign | state = inEffect | state = suspension);
-			_termination := (state = sTermination | state = unsTermination);
-		
-			-- obligations/powers' status changes once the contract goes to inEffect state
-			_o_activated := (state = form & activated) |
-								(state = suspension & resumed) |
-								(state = unassign & assigned_party) |
-								(state = inEffect);
-		
-		  VAR
-			state 		 : { not_created, form, inEffect, suspension, unassign, sTermination, unsTermination};
-		
-		  ASSIGN
-		    init(state) := not_created;
-		    next(state) := case
-				state = not_created & triggered  					: form;
-				state = form        & activated  					: inEffect;
-				state = inEffect    & fulfilled_active_obligation  	: sTermination;
-				state = inEffect    & suspended  					: suspension;
-				state = inEffect    & revoked_party  				: unassign;
-				state = inEffect    & terminated 					: unsTermination;
-				state = suspension  & resumed    					: inEffect;
-				state = suspension  & terminated 					: unsTermination;
-				state = unassign    & assigned_party 				: inEffect;
-				state = unassign    & terminated 					: unsTermination;
-				TRUE                             					: state;
-		    esac;
-		
-		--------------------------------------------------------------------------------------
-		-- CONTRACT INDEPENDENT CONCEPTS
-		--------------------------------------------------------------------------------------
-		MODULE Role(party)
-		 DEFINE _party := party;
-		
-		MODULE Asset(owner)
-		 DEFINE _owner := owner;
-		 
-		MODULE Situation(proposition)
-		 DEFINE _holds := proposition;
-		 
-		-- WhappensBefore(e,t), ShappensBefore(e,t) are HappensAfter(e,t) are simulated as Happens(e,t) 		 
-		MODULE WhappensBefore(event, time)
-		 DEFINE _false  := (state = not_happened);
-			    _true := (state = happened);
-		 VAR state: {not_happened, happened};
-			ASSIGN
-			    init(state) := not_happened;
-			    next(state) := case
-					state = not_happened & event._active & next(event._happened) : happened;
-					TRUE : state;
-				esac;
-				
-		MODULE ShappensBefore(event, time)
-		 DEFINE _false  := (state = not_happened);
-			    _true := (state = happened);
-		 VAR state: {not_happened, happened};
-			ASSIGN
-			    init(state) := not_happened;
-			    next(state) := case
-					state = not_happened & event._active & next(event._happened) : happened;
-					TRUE : state;
-				esac;
+  def String generateFunctionCall(PrimaryExpressionFunctionCall argFunctionCallExp, String thisString) {
+    val functionCall = argFunctionCallExp.function
+    switch (functionCall) {
+      TwoArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
+      OneArgMathFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+      TwoArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + "," + generateExpressionString(functionCall.arg2, thisString) + ")"
+      OneArgStringFunction: return functionCall.name + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
+    }
+  }
+  
+  // Generate generic modules
+  def String generateStaticModules () {
+    val code = '''
+    MODULE Timer(start)
+     VAR active1  : boolean;
+         expired1 : boolean;
+     ASSIGN
+       init(active1) := start;
+       next(active1) := (active1 | start) ? TRUE : active1;
+       init(expired1) :=  active1 ? {TRUE,FALSE} : FALSE;
+       next(expired1) :=  case
+               active1 & !expired1 : {TRUE,FALSE};
+               expired1           : TRUE;
+               TRUE              : FALSE;
+           esac;
+    
+    MODULE Event(start)
+     DEFINE _inactive := (state = inactive);
+            _happened := (state = happened);
+            _expired  := (state = expired);
+     VAR triggered : boolean;
+             timer : Timer(start & !_happened & !_expired);
+             state : {inactive, active, happened, expired};
+         performer  : {"CBEEF", "COSTCO"};
+    
+     ASSIGN
+      next(performer) := case
+        state=active & start  : {"CBEEF", "COSTCO"};
+        TRUE          : performer;
+      esac;
+     ASSIGN
+      init(triggered) := FALSE;
+      next(triggered) := (state=active & start) ? {FALSE,TRUE} : FALSE;
+      init(state)     := inactive;
+      next(state)     := case
+        state=inactive & start                          : active;
+        state=active & start & triggered &
+                  timer.active1 : happened;
+      state=active & start & timer.expired1 : expired;
+        TRUE                                            : state;
+      esac;
+    
+    --------------------------------------------------------------------------------------
+    -- 'name' is party name
+    -- 'removeL/R/P' releases liability, righHolder or performer position of a party
+    -- 'addL/R/P' adds liability, righHolder or performer position to a party
+    --------------------------------------------------------------------------------------
+    MODULE Party(norm, name, removeL, addL, removeR, addR, removeP, addP)
+      DEFINE
+      _name       := name;
+      _norm     := norm;
+      _is_performer := p_state=P;
+      _is_liable    := l_state=L;
+      _is_rightHolder := r_state=R;
+    
+      VAR
+      l_state : {Init, L};
+      r_state : {Init, R};
+      p_state : {Init, P};
+    
+      ASSIGN
+      init(l_state) := Init;
+      next(l_state) := case
+        l_state=Init & addL : L;
+        l_state=L &removeL  : Init;
+        TRUE        : l_state;
+      esac;
+    
+      ASSIGN
+      init(r_state) := Init;
+      next(r_state) := case
+        r_state=Init & addR : R;
+        r_state=R & removeR : Init;
+        TRUE        : r_state;
+      esac;
+    
+      ASSIGN
+      init(p_state) := Init;
+      next(p_state) := case
+        p_state=Init & addP : P;
+        p_state=P & removeP : Init;
+        TRUE        : p_state;
+      esac;
+    
+      INVAR
+      !(addL & removeL) &
+      !(addR & removeR) &
+      !(addP & removeP) &
+      !(_is_rightHolder & _is_liable);
+    
+    --------------------------------------------------------------------------------------
+    -- 'cnt_in_effect'    indicates if the contract is in inEffect state
+    -- 'power_suspended'  indicates if a power suspends the obligation
+    -- 'cnt_suspended'    indicates if the contract suspension suspends the obligation
+    -- 'power_resumed'    indicates if a power resumption resumes the obligation
+    -- 'cnt_resumed'      indicates if the contract resumption resumes the obligation
+    --------------------------------------------------------------------------------------
+    MODULE Obligation(name, surviving, cnt_in_effect, cnt_untermination,
+                      fulfilled, triggered, violated, activated,
+              expired1, power_suspended, cnt_suspended, terminated, power_resumed,
+              cnt_resumed, discharged, antecedent)
+      DEFINE
+      _name     := name;
+      _surviving  := surviving;
+      _suspended  := (power_suspended | (cnt_suspended & !surviving));
+      _active   := (state = inEffect | state = suspension);
+    
+      VAR
+      state     : {not_created, create, inEffect, suspension, discharge,
+               fulfillment, violation, unsTermination};
+      sus_state : {not_suspended, sus_by_contract, sus_by_power};
+    
+      ASSIGN
+     --NEW: update axioms(surviving obligations are not suspended! informally mentioned)
+      init(sus_state) := not_suspended;
+      next(sus_state) := case
+        sus_state=not_suspended & !surviving & cnt_suspended  : sus_by_contract;
+        sus_state=sus_by_contract & !surviving & cnt_resumed  : not_suspended;
+        sus_state=not_suspended & !surviving & power_suspended  : sus_by_power;
+        sus_state=sus_by_power & !surviving & power_resumed   : not_suspended;
+        TRUE                          : sus_state;
+      esac;
+    
+      ASSIGN
+        init(state) := not_created;
+        next(state) := case
+        cnt_in_effect & state=not_created   & triggered & !antecedent : create;
+        cnt_in_effect & state=not_created   & triggered & antecedent  : inEffect;
+        cnt_in_effect & state=create        & antecedent              : inEffect;
+        cnt_in_effect & state=create        & (expired1 | discharged)  : discharge;
+        cnt_in_effect & state=inEffect      & fulfilled               : fulfillment;
+        cnt_in_effect & state=inEffect      & _suspended              : suspension;
+        cnt_in_effect & state=inEffect      & violated                : violation;
+        cnt_in_effect & _active             & terminated              : unsTermination;
+        cnt_untermination & !surviving    & _active               : unsTermination;
+        sus_state=sus_by_contract & state=suspension  & cnt_resumed   : inEffect;
+        sus_state=sus_by_power    & state=suspension  & power_resumed   : inEffect;
+        TRUE                                                          : state;
+      esac;
+    
+    --------------------------------------------------------------------------------------
+    -- 'cnt_in_effect'   indicates if the contract is in inEffect state
+    -- 'power_suspended' indicates if a power suspends the power
+    -- 'cnt_suspended'   indicates if the contract suspension suspends the power
+    -- 'power_resumed'   indicates if a power resumption resumes the power
+    -- 'cnt_resumed'     indicates if the contract resumption resumes the power
+    --------------------------------------------------------------------------------------
+    MODULE Power(name, cnt_in_effect, triggered, activated, expired1, power_suspended, cnt_suspended,
+                 terminated, exerted, power_resumed, cnt_resumed, antecedent)
+      DEFINE
+      _name    := name;
+      _active    := (state = inEffect | state = suspension);
+      _suspended   := (power_suspended | cnt_suspended);
+    
+      VAR
+      state     : {not_created, create, inEffect, suspension, sTermination, unsTermination};
+      sus_state : {not_suspended, sus_by_contract, sus_by_power};
+    
+      ASSIGN
+      init(sus_state) := not_suspended;
+      next(sus_state) := case
+        sus_state=not_suspended & cnt_suspended   : sus_by_contract;
+        sus_state=sus_by_contract & cnt_resumed   : not_suspended;
+        sus_state=not_suspended & power_suspended   : sus_by_power;
+        sus_state=sus_by_power & power_resumed    : not_suspended;
+        TRUE                    : sus_state;
+      esac;
+    
+      ASSIGN
+       init(state) := not_created;
+       next(state) := case
+         cnt_in_effect & state = not_created  & triggered & !antecedent : create;
+         cnt_in_effect & state = not_created  & triggered & antecedent  : inEffect;
+         cnt_in_effect & state = create       & antecedent              : inEffect;
+         cnt_in_effect & state = create       & expired1                : unsTermination;
+         cnt_in_effect & state = inEffect     & exerted                 : sTermination;
+         cnt_in_effect & state = inEffect     & _suspended              : suspension;
+         cnt_in_effect & state = inEffect     & expired1                : unsTermination;
+       cnt_in_effect & _active          & terminated              : unsTermination;
+    
+       sus_state=sus_by_contract & state=suspension  & cnt_resumed    : inEffect;
+       sus_state=sus_by_power    & state=suspension  & power_resumed      : inEffect;
+    
+         TRUE                                                       : state;
+       esac;
+    
+    --------------------------------------------------------------------------------------
+    -- 'assigned_party'        indicates if a party is assigned to a role
+    -- 'revoked_party'         indicates if a party is unassigned from a role
+    -- 'fulfilled_active_obligation' indicates if all active obligations are fulfilled
+    --------------------------------------------------------------------------------------
+    MODULE Contract(triggered, activated, terminated, suspended, resumed,
+            revoked_party, assigned_party, fulfilled_active_obligation)
+      DEFINE
+      _active    := (state = unassign | state = inEffect | state = suspension);
+      _termination := (state = sTermination | state = unsTermination);
+    
+      -- obligations/powers' status changes once the contract goes to inEffect state
+      _o_activated := (state = form & activated) |
+                (state = suspension & resumed) |
+                (state = unassign & assigned_party) |
+                (state = inEffect);
+    
+      VAR
+      state      : { not_created, form, inEffect, suspension, unassign, sTermination, unsTermination};
+    
+      ASSIGN
+        init(state) := not_created;
+        next(state) := case
+        state = not_created & triggered           : form;
+        state = form        & activated           : inEffect;
+        state = inEffect    & fulfilled_active_obligation   : sTermination;
+        state = inEffect    & suspended           : suspension;
+        state = inEffect    & revoked_party         : unassign;
+        state = inEffect    & terminated          : unsTermination;
+        state = suspension  & resumed             : inEffect;
+        state = suspension  & terminated          : unsTermination;
+        state = unassign    & assigned_party        : inEffect;
+        state = unassign    & terminated          : unsTermination;
+        TRUE                                      : state;
+        esac;
+    
+    --------------------------------------------------------------------------------------
+    -- CONTRACT INDEPENDENT CONCEPTS
+    --------------------------------------------------------------------------------------
+    MODULE Role(party)
+     DEFINE _party := party;
+    
+    MODULE Asset(owner)
+     DEFINE _owner := owner;
+     
+    MODULE Situation(proposition)
+     DEFINE _holds := proposition;
+     
+    -- WhappensBefore(e,t), ShappensBefore(e,t) are HappensAfter(e,t) are simulated as Happens(e,t)      
+    MODULE WhappensBefore(event, time)
+     DEFINE _false  := (state = not_happened);
+          _true := (state = happened);
+     VAR state: {not_happened, happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event._active & next(event._happened) : happened;
+          TRUE : state;
+        esac;
+        
+    MODULE ShappensBefore(event, time)
+     DEFINE _false  := (state = not_happened);
+          _true := (state = happened);
+     VAR state: {not_happened, happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event._active & next(event._happened) : happened;
+          TRUE : state;
+        esac;
 
-		MODULE HappensAfter(event, time)
-		 DEFINE _false  := (state = not_happened);
-			    _true := (state = happened);
-		 VAR state: {not_happened, happened};
-			ASSIGN
-			    init(state) := not_happened;
-			    next(state) := case
-					state = not_happened & event._active & next(event._happened) : happened;
-					TRUE : state;
-				esac;
-					
-		MODULE WhappensBeforeE(event1, event2)
-		 DEFINE _false  := (state = not_happened);
-			    _true := (state = happened);
-		 VAR state: {not_happened, happened};
-			ASSIGN
-			    init(state) := not_happened;
-			    next(state) := case
-					state = not_happened & event1._active & next(event1._happened) & !(next(event2_happened)) : happened;
-					TRUE : state;
-				esac;
-			
-		MODULE ShappensBeforeE(event1, event2)
-		 DEFINE _false  := (state = not_happened);
-		        _true 	:= (state = ev1_ev2_happened);
-		 VAR state: {not_happened, ev1_happened, ev1_ev2_happened};
-		 	ASSIGN
-		   		init(state) := not_happened;
-		    	next(state) := case
-					state = not_happened & event1._active & next(event1._happened) & !(next(event2_happened)) : ev1_happened;
-					state = ev1_happened & event2._active & next(event2._happened) : ev1_ev2_happened;
-					TRUE : state;
-		 esac;
-			
-		MODULE HappensWithin(event, situation)
-		 DEFINE _false  := (state = not_happened);
-		        _true 	:= (state = happened);
-		 VAR state: {happened, not_happened};
-		 	ASSIGN
-		    	init(state) := not_happened;
-		    	next(state) := case
-					state = not_happened & event._active & next(event._happened) & situation._holds : happened;
-					TRUE : state;
-				esac;	
-		
-		MODULE HappensAfterE(event1, event2)
-		 DEFINE _false  := (state = not_happened);
-		        _true := (state = ev2_ev1_happened);
-		
-		 VAR state: {not_happened, ev2_happened, ev2_ev1_happened};
-		 	ASSIGN
-		    	init(state) := not_happened;
-		    	next(state) := case
-					state = not_happened & !(next(event1_happened)) & event2._active & next(event2._happened) : ev2_happened;
-					state = ev2_happened & event1._active & next(event1._happened) : ev2_ev1_happened;
-					TRUE : state;	
-			esac;
-		'''
-		return code
-	}
-
-	/**
-	 * Generate domain modules
-	 */
-	def String getEnumItems(Enumeration enumeration){
-		var enums = ""
-		for(item : enumeration.enumerationItems) {
-			if(enums.length == 0) 
-				enums += '"' + item.name + '"'
-			else
-				enums += ',' + '"' + item.name + '"'
-		}
-		return enums
-	}
-	 
-	def void generateEnumeration(Enumeration enumeration) {
-		pcEnumerations.add(getEnumItems(enumeration))
-	}
-
-	def void generateEvent(IFileSystemAccess2 fsa, RegularType event) {
-		val isBase = event.ontologyType !== null
-
-		if (isBase === true) {
-			// extract attributes of parents
-			var parameters = '''
-			�FOR att : event.attributes�
-			�att.name�, 
-			�ENDFOR�
-			'''
-			
-			// trim parameters
-			parameters = parameters.replace("\r\n", "")
-			if(parameters.length() > 1)
-				parameters = parameters.substring(0, parameters.length()-2)
-			
-			// make nuXmv module
-			val code = '''
-				�IF event.attributes.size()>0�
-					MODULE �event.name�(start, �parameters�)
-				�ELSE�
-					MODULE �event.name�(start)
-				�ENDIF�					
-					 VAR
-						event : Event(start);
-			'''
-			pcDomEvents.add(code)
-		} else if (event.regularType !== null) {
-			val parentType = event.regularType
-			val allAttributes = Helpers.getAttributesOfRegularType(event)
-			val parentAttributes = new ArrayList<Attribute>(allAttributes)
-			parentAttributes.removeAll(event.attributes)
-			
-			
-			// extract attributes of parents
-			var parameters = '''
-			�FOR att : event.attributes�
-			�generateAssetParameters(att)�
-			�ENDFOR�
-			�FOR att : parentAttributes�
-			�generateAssetParameters(att)�
-			�ENDFOR�
-			'''
-			
-			// trim parameters
-			parameters = parameters.replace("\r\n", "")
-			parameters = parameters.substring(0, parameters.length()-2)
-			
-			val code = '''
-				�IF allAttributes.size()>0�
-					MODULE �event.name�(start, �parameters�)
-					 DEFINE
-							�FOR attribute : event.attributes�
-							�generateAssetAttributes(attribute)�
-							�ENDFOR�
-				�ELSE�
-					MODULE �event.name�(start)
-				�ENDIF�
-					 VAR
-							event : �parentType.name�(start, �parentAttributes.map[Attribute a | a.name].join(',')�);
-			'''
-			pcDomEvents.add(code)
-		}
-	}
-
-	def void generateRole(IFileSystemAccess2 fsa, RegularType role) {
-		val isBase = role.ontologyType !== null
-
-		if (isBase === true) {
-			val code = '''
-				�IF role.attributes.map[Attribute a | a.name].length > 0�
-					MODULE �role.name�(party, �role.attributes.map[Attribute a | a.name].join(',')�)
-				�ELSE�
-					MODULE �role.name�(party)
-				�ENDIF�
-				�IF role.attributes.length > 0�
-					 DEFINE
-						�FOR attribute : role.attributes�
-							_�attribute.name� := �attribute.name�;
-						�ENDFOR�
-				�ENDIF�
-					 VAR
-							role : Role(party);
-			'''
-			pcRoles.add(code)
-		} else if (role.regularType !== null) {
-			val parentType = role.regularType
-			val allAttributes = Helpers.getAttributesOfRegularType(role)
-			val parentAttributes = new ArrayList<Attribute>(allAttributes)
-			parentAttributes.removeAll(role.attributes)
-			val code = '''
-				�IF allAttributes.map[Attribute a | a.name].length > 0�
-					MODULE �role.name�(party, �allAttributes.map[Attribute a | a.name].join(',')�)
-				�ELSE�
-					MODULE �role.name�(party)
-				�ENDIF�
-				�IF role.attributes.length > 0�
-					 DEFINE
-						�FOR attribute : role.attributes�
-							_�attribute.name� := �attribute.name�;
-						�ENDFOR�
-				�ENDIF�
-						VAR
-							role : �parentType.name�(party, �parentAttributes.map[Attribute a | a.name].join(',')�);
-			'''
-			pcRoles.add(code)
-		}
-	}
-	
-	def String generateDomainModules () {
-		val code = '''
-		
-		�FOR role : pcRoles�
-		�role�
-		
-		�ENDFOR�
-		
-		�FOR asset : pcAssets�
-		�asset�
-		
-		�ENDFOR�
-		
-		�FOR event : pcDomEvents�
-		�event�
-		
-		�ENDFOR�
-		'''
-		return code
-	}
-	
-	def String generateConstants() {
-		val norms= new ArrayList<String>
-		for(obligation : obligations) 
-			norms.add('"' + obligation.name + '"')
-
-		for(power : powers)
-			norms.add('"' + power.name + '"')
-		
-		if(pcEnumerations.size() > 0) {
-			return pcEnumerations.join(",") + ',' + String.join(",", norms) + ';';			
-		}
-		else
-			return String.join(",", norms) + ';';
-	}
-	
-	def String generateRoleInstances() {
-		val code = '''
-		�FOR Map.Entry<String, Pair<String, String>> entry : roleInstances.entrySet()�
-		�entry.key� : �entry.value.key�(�entry.value.value�);
-		�ENDFOR�
-		'''
-		return code
-	}
-	
-	/**
-	 * Description: convert Symboleo�s contract concept to SymboleoPC�s module
-	 * Principle: 2
-	 */
-	def void compileContract(IFileSystemAccess2 fsa, Model model) {
-		var cntPrecondition = generateContractPreconditionSituation(model);
-		var cntTermination = generateContractTerminationSituation(model);
-		var cntSuspension = generateContractSuspensionSituation(model);
-		var cntResumption = generateContractResumptionSituation(model);
-		
-		var oblsTermination = generateObligationsTerminationSituation(model);
-		var oblsSuspension = generateObligationsSuspensionSituation(model);
-		var oblsResumption = generateObligationsResumptionSituation(model);
-		var oblsDiscard = generateObligationsDischargeSituation(model);
-		var oblsViolated = generateObligationViolatedSituation(model);
-		var oblsExpired = generateObligationExpiredSituation(model);		
-		
-		var powsExpired = generatePowerExpiredSituation(model);
-		var powsExerted = generatePowerExertedSituation(model);
-		
-		var antecedents = generateAntecedentsSituation(model);
-		var consequents = generateConsequentsSituation(model);
-		var triggers = generateTriggersSituation(model);
-		
-		val code = '''
-		�generateStaticModules()�
-		
-		--------------------------------------------------------------------------------------
-		-- CONTRACT DEPENDENT CONCEPTS
-		--------------------------------------------------------------------------------------
-		�generateDomainModules()�
-		
-		--------------------------------------------------------------------------------------
-		-- CONTRACT
-		--------------------------------------------------------------------------------------
-		MODULE �model.contractName� (�pcParameters.join(', ')�)
-		
-			CONSTANTS
-			�generateConstants()�
-			
-			VAR
-				�compileDeclarationVariables(model)�
-				
-				cnt_succ_Termination : Situation((cnt.state=inEffect)
-				�FOR obligation: obligations� 
-				�IF !pcSurvivingObligations.contains(obligation.name)�
-				& !(�obligation.name�._active)
-				�ENDIF�
-				�ENDFOR�
-				);
-				
-				--------------
-				-- SITUATIONS
-				--------------
-				�getSituations()�
-				
-				cnt: Contract(TRUE, TRUE, �cntTermination�, �cntSuspension�, �cntResumption�, FALSE, FALSE, cnt_succ_Termination._holds);
-					
-				--------------
-				-- OBLIGATIONS
-				--------------		
-				�FOR obligation: obligations�
-				�val antecedent = antecedents.get(obligation.name) !== null ? antecedents.get(obligation.name) : "TRUE"�
-				�val consequent = consequents.get(obligation.name)�
-				�val trigger = triggers.get(obligation.name) !== null ? triggers.get(obligation.name) : "TRUE"�
-				�val oblTerm = oblsTermination.get(obligation.name) !== null ? oblsTermination.get(obligation.name) : "FALSE"�
-				�val oblSus = oblsSuspension.get(obligation.name) !== null ? oblsSuspension.get(obligation.name) : "FALSE"�
-				�val oblRes = oblsResumption.get(obligation.name) !== null ? oblsResumption.get(obligation.name) : "FALSE"�
-				�val oblDisc = oblsDiscard.get(obligation.name) !== null ? oblsDiscard.get(obligation.name) : "FALSE"�
-				�val oblViol = oblsViolated.get(obligation.name) !== null ? oblsViolated.get(obligation.name) : "FALSE"�
-				�val oblExp = oblsExpired.get(obligation.name) !== null ? oblsExpired.get(obligation.name) : "FALSE"�
-				�val oblAct = "FALSE"�
-				�val isSurviving = pcSurvivingObligations.contains(obligation.name) ? "TRUE" : "FALSE"�
-				�val oblName = obligation.name�				
-				�oblName� : Obligation("�oblName�", �isSurviving�, cnt._o_activated, �cntTermination�, �consequent�, �trigger�, �oblViol�, �oblAct�, �oblExp�, �oblSus�, �cntSuspension�, �oblTerm�, �oblRes�, �cntResumption�, �oblDisc�, �antecedent�);
-						
-				�ENDFOR�
-				
-				--------------
-				-- POWERS
-				--------------
-				�FOR power: powers�
-				�val antecedent = antecedents.get(power.name) !== null ? antecedents.get(power.name) : "TRUE"�
-				�val trigger = triggers.get(power.name) !== null ? triggers.get(power.name) : "TRUE"�
-				�val powAct = "FALSE"�
-				�val powSus = "FALSE"�
-				�val powTerm = "FALSE"�
-				�val powRes = "FALSE"�
-				�val powName = power.name�
-				�val powExe = powsExerted.get(power.name) !== null ? powsExerted.get(power.name) : "FALSE"�
-				�val powExp = powsExpired.get(power.name) !== null ? powsExpired.get(power.name) : "FALSE"�				
-				�power.name� : Power("�powName�", cnt._o_activated, �trigger�, �powAct�, �powExp�, �powSus�, �cntSuspension�, �powTerm�, �powExe�, �powRes�, �cntResumption�, �antecedent�);
-				
-				�ENDFOR�
-				
-				--------------
-				-- PARTIES
-				--------------
-				�compileParties()�
-				
-				--------------
-				-- CONSTRAINTS
-				--------------
-				�compileConstraints(cntPrecondition)�
-		'''
-		fsa.generateFile("./domain/contracts/" + model.contractName + ".smv", code)
-	}	
-	
-	def void compileDomainTypes(IFileSystemAccess2 fsa, List<DomainType> domainTypes) {
-		for (asset : assets) {
-			generateAsset(fsa, asset)
-		}
-		for (event : events) {
-			generateEvent(fsa, event)
-		}
-		for (role : roles) {
-			generateRole(fsa, role)
-		}
-
-		// should update
-		for (enumeration : enumerations) {
-			generateEnumeration(enumeration)
-		}
-	}
-	
-	/*def String generateAssetAttributes(Attribute att) {
-		
-		val code = '''
-		�var done = false�
-		�IF att.domainType instanceof RegularType�
-		�val RegularType base = getBaseType(att.domainType)�
-		�IF base !== null�
-		�IF base.ontologyType.name == "Asset"�
-		�val astname = base.name�
-		�FOR asset : assets�
-		�IF asset.name == astname�
-		�FOR embatt : asset.attributes�
-		�val parentAtt = generateAssetAttributes(embatt)�
-		�parentAtt.replaceAll(".*_owner :=.*(\r | \r\n)?", "")�		
-		�ENDFOR�
-		�{done = true; null}�
-		�ENDIF�
-		�ENDFOR�
-		�ENDIF�
-		�ENDIF�
-		�ENDIF�
-		�IF !done�
-			_�att.name� := �att.name�;
-		�ENDIF�
-		'''
-		return code
-	}*/
-	
-	def String generateAssetAttributes(Attribute att) {
-		/*val code = '''
-		�var done = false�
-		�IF att.domainType instanceof RegularType�
-		�val RegularType base = getBaseType(att.domainType)�
-		�IF base !== null�
-		�IF base.ontologyType.name == "Asset"�
-		�val astname = base.name�
-		�FOR asset : assets�
-		�IF asset.name == astname�
-		�FOR embatt : asset.attributes�
-		�val parentAtt = generateAssetAttributes(embatt)�
-		�parentAtt.replaceAll(".*_owner :=.*(\r | \r\n)?", "")�		
-		�ENDFOR�
-		�{done = true; null}�
-		�ENDIF�
-		�ENDFOR�
-		�ENDIF�
-		�ENDIF�
-		�ENDIF�
-		�IF !done�
-			_�att.name� := �att.name�;
-		�ENDIF�
-		'''*/
-		
-		val code = '''
-		�var done = false�
-		�IF att.domainType instanceof RegularType�
-		�val RegularType base = getBaseType(att.domainType)�
-		�IF base !== null�
-		�IF base.ontologyType.name == "Asset"�
-		�val astname = base.name�
-		�FOR asset : assets�
-		�IF asset.name == astname�
-		�{done = true; null}�
-		�ENDIF�
-		�ENDFOR�
-		�ENDIF�
-		�ENDIF�
-		�ENDIF�
-		�IF !done�
-			_�att.name� := �att.name�;
-		�ENDIF�
-		'''
-		
-		return code
-	}
-	
-	def String generateAssetParameters(Attribute att) {
-		
-		val code = '''
-		�var done = false�
-		�IF att.domainType instanceof RegularType�
-		�val RegularType base = getBaseType(att.domainType)�
-		�IF base !== null�
-		�IF base.ontologyType.name == "Asset"�
-		�val astname = base.name�
-		�FOR asset : assets�
-		�IF asset.name == astname�
-		�FOR embatt : asset.attributes�
-		�var parentAst = generateAssetParameters(embatt)�
-		�parentAst.replaceAll("owner,", "")�
-		�ENDFOR�
-		�{done = true; null}�
-		�ENDIF�
-		�ENDFOR�
-		�ENDIF�
-		�ENDIF�
-		�ENDIF�
-		�IF !done�
-			�att.name�, 
-		�ENDIF�
-		'''
-		return code
-	}
-	
-	def void generateAsset(IFileSystemAccess2 fsa, RegularType asset) {
-		val isBase = asset.ontologyType !== null
-		
-		// challenge: add owner as a keyword and a default attribute of assets		
-		if (isBase === true) {
-			var parameters = '''
-			�FOR att : asset.attributes�
-			�att.name�, 
-			�ENDFOR�
-			'''
-			
-			// trim parameters
-			parameters = parameters.replace("\r\n", "")
-			if(parameters.length() > 1)
-				parameters = parameters.substring(0, parameters.length()-2)
-			
-			// make nuXmv module
-			val code = '''
-				�IF asset.attributes.size()>0�
-					MODULE �asset.name� (�parameters�)
-				�ELSE�
-					MODULE �asset.name� ()	
-				�ENDIF�		
-					 VAR
-							asset:Asset(owner);
-			'''
-			pcAssets.add(code)
-		} else if (asset.regularType !== null) {
-			val parentType = asset.regularType
-			val allAttributes = Helpers.getAttributesOfRegularType(asset)
-			val parentAttributes = new ArrayList<Attribute>(allAttributes)
-			parentAttributes.removeAll(asset.attributes)
-			
-			var parameters = ""
-			for(att : asset.attributes) {
-				var param = generateAssetParameters(att)
-				
-				// trim parameters
-				param = param.replace("\r\n", "")
-				if(param.length() > 1){
-					param = param.substring(0, param.length()-2)
-					parameters += param
-				}
-			}
-			
-			var parentParams = ""
-			for(att : parentAttributes) {
-				var param = generateAssetParameters(att)
-								
-				// trim parameters
-				param = param.replace("\r\n", "")
-				if(param.length() > 1){
-					param = param.substring(0, param.length()-2)
-					
-					if(!param.equals("owner")){
-						if(parameters.length == 0)
-							parameters += param
-						else 
-							parameters += ', ' + param						
-					}
-					if(parentParams.length == 0)
-						parentParams += param
-					else
-						parentParams += ', ' + param
-				}
-			}
-			
-			val code = '''
-				MODULE �asset.name� (�parameters�)
-				�IF asset.attributes.size()>0�
-				 DEFINE 
-						�FOR attribute : asset.attributes�
-							�generateAssetAttributes(attribute)�
-						�ENDFOR�
-						�FOR attribute : parentAttributes�
-						�IF !attribute.name.equals("owner")�
-							�generateAssetAttributes(attribute)�
-						�ENDIF�
-						�ENDFOR�
-				�ENDIF�
-				 VAR
-						asset:�parentType.name�(�parentParams�);
-			'''
-			pcAssets.add(code)
-		}
-	}
-	
-	def String generateEventInitSituation (Model model, String eventName) {
-		var List<String> situations = new ArrayList<String>()
-		var String situation = "";
-			
-		for(obligation: model.obligations) {
-			var propositions = obligationAntecedentEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {				
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add(obligation.name + ".state=create")					
-					}
-				}	
-			
-			propositions = obligationConsequentEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add(obligation.name + ".state=inEffect")
-					}	
-				}	
-			
-			propositions = obligationTriggerEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add("cnt.state=inEffect")
-					}
-				}		
-		}
-		
-		for(obligation: model.survivingObligations) {
-			var propositions = obligationAntecedentEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {				
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add(obligation.name + ".state=create")					
-					}
-				}	
-			
-			propositions = obligationConsequentEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add(obligation.name + ".state=inEffect")
-					}	
-				}	
-			
-			propositions = obligationTriggerEvents.get(obligation)
-			if(propositions !== null)
-				for(p : propositions) {
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add("cnt.state=inEffect")
-					}
-				}		
-		}
-		
-		for(power: model.powers) {
-			var propositions = powerAntecedentEvents.get(power)
-			if(propositions !== null)
-				for(p : propositions) {				
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add(power.name + ".state=create")					
-					}
-				}	
-			
-			propositions = powerTriggerEvents.get(power)
-			if(propositions !== null)
-				for(p : propositions) {
-					var ev = getEvent(p.predicateFunction)
-					if(ev.equals(eventName)){
-						situations.add("cnt.state=inEffect")
-					}
-				}		
-		}
-			
-		for(s : situations) {
-			if(situation === ""){
-				situation = s;
-			}
-			else{
-				situation += " | " + s;
-			}
-		}
-
-		return situation
-	}
-	
-	
-	def void addDeclarationVariables (Model model) {
-		for(variable: model.variables) {		
-			var situation = generateEventInitSituation(model, variable.name); //this is used only for events
-			var assgs = new ArrayList<Pair<String, String>>
-			
-			if(variable.type instanceof RegularType)
-				for(assignment: variable.attributes){
-					/*if(assignment instanceof AssignVariable){
-						var found = false
-						val asgexp = generateDotExpressionString(assignment.value, null)
- 						for(ast:pcVariables) {
-							if(ast.name.equals(asgexp)) {
-								for(p:ast.parameters) {
-									if(!p.key.equals("owner"))
-										assgs.add(p)									
-									}
-								found = true
-							}							
-						}
-						if(!found) {
-							assgs.add(new Pair(assignment.name, generateDotExpressionString(assignment.value, null)))							
-							}			
-					}
-					else if(assignment instanceof AssignExpression)
-						assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))*/
-	
-	
-					if(assignment instanceof AssignVariable)
-							assgs.add(new Pair(assignment.name, generateDotExpressionString(assignment.value, null)))								
-					else if(assignment instanceof AssignExpression)
-						assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))						
-						}
-			addVariable(variable.name, situation, variable.type.name, assgs)
-		}
-	}
-	
-	def String compileDeclarationVariables(Model model) {
-		// Convert explicit variables
-		addDeclarationVariables(model)
-		
-		// Convert implicit variables
-		var code = ""
-		for(variable : pcVariables) {
-			var params = ""
-			if(variable.starter !== null)
-				params += variable.starter
-			
-			if(variable.parameters !== null)
-				for(param : variable.parameters) {
-					if(params.length > 0)
-						params += ", " + param.value
-					else
-						params += param.value
-				}			
-			code += variable.name + " :" + variable.type + "(" + params + ");\n\n"
-		}
-
-		return code;
-	}
-	
-	def String compileConstraints(String cntPrecondition) {
-		
-		// implicit constraints		
-		for(var i =0; i< predicates.size; i++) {
-			for(var j = i+1; j< predicates.size; j++) {
-				
-				// constrain1: HappensBefore(event1, time1) and HappensAfter(event2, time2) and time1<time2
-				if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(j).predicate == predicateType.HAPPENSAFTER && 
-					predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
-						pcConstraints.add("(" + predicates.get(i).time1.time + " < " + predicates.get(j).time1.time + " & " + 
-							predicates.get(j).event + ".state = active ->" + predicates.get(i).event + "._happened | " 
-							+ predicates.get(i).event + "._expired" + ")")					
-				}		
-				
-				if(predicates.get(i).predicate == predicateType.HAPPENSAFTER && (predicates.get(j).predicate == predicateType.SHAPPENSBEFORE || predicates.get(j).predicate == predicateType.WHAPPENSBEFORE) &&
-					predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
-						pcConstraints.add("(" + predicates.get(j).time1.time + " < " + predicates.get(i).time1.time + " & " + 
-							predicates.get(i).event + ".state = active ->" + predicates.get(j).event + "._happened | " 
-							+ predicates.get(j).event + "._expired" + ")")					
-				}	
-				
-				// constrain2: HappensBefore(event1, time1) and HappensWithin(event2, time2, time3) and time1<time2
-				if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(j).predicate == predicateType.HAPPENSWITHIN &&
-					predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
-						pcConstraints.add("(" + predicates.get(i).time1.time + " < " + predicates.get(j).time1.time + " & " + 
-							predicates.get(j).event + ".state = active ->" + predicates.get(i).event + "._happened | " 
-							+ predicates.get(i).event + "._expired" + ")")	
-					
-				}
-				
-				if(predicates.get(i).predicate == predicateType.HAPPENSWITHIN && (predicates.get(j).predicate == predicateType.SHAPPENSBEFORE || predicates.get(j).predicate == predicateType.WHAPPENSBEFORE) &&
-					predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE
-				) {
-						pcConstraints.add("(" + predicates.get(j).time1.time + " < " + predicates.get(i).time1.time + " & " + 
-							predicates.get(i).event + ".state = active ->" + predicates.get(j).event + "._happened | " 
-							+ predicates.get(j).event + "._expired" + ")")	
-					
-				}								
-			}
-			
-			// HappensBefore(event1, event2)
-			if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(i).time1.type == Tpoint.Type.EVENT) {
-						pcConstraints.add("(" + predicates.get(i).time1.time + "._happened ->" + predicates.get(i) + "._true" + ")")	
-					
-				}			
-		}
-		
-		// explicit constraints
-		var econstr = ""
-		var first = true
-		for(cntr:constraints) {
-			var constValue = generatePropositionString(null, null, null, cntr)
-			if(constValue !== null){
-				if(first) {
-					econstr += constValue
-					first = false
-				}
-				else
-					econstr += '&' + constValue
-			}
-		}
-		
-		val iconstr = '''�pcConstraints.size() > 0 ? pcConstraints.join(' & ') : ""�'''
-				
-		var fullconstr = ""
-		if(cntPrecondition.length > 0 || econstr.length() > 0 || iconstr.length() > 0) {
-			fullconstr += "INVAR \n\t"
-			if(cntPrecondition.length > 0){
-				fullconstr += cntPrecondition
-				if(econstr.length() > 0)
-					fullconstr += ' & ' + econstr
-				if(iconstr.length() > 0)
-					fullconstr += ' & ' + iconstr					
-				}
-			else
-				if(econstr.length() > 0){
-					fullconstr += econstr
-					if(iconstr.length() > 0)
-					fullconstr += ' & ' + iconstr					
-				}
-				else
-					fullconstr += iconstr
-			}
-		
-		return fullconstr+';'
-	}
-	
-	def String compileParties() {
-		val code = '''		
-		�FOR obligation:obligations�
-			�obligation.name�_debtor : Party(�obligation.name�._name, �generateDotExpressionString(obligation.debtor, null)�.role._party, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
-			�obligation.name�_creditor : Party(�obligation.name�._name, �generateDotExpressionString(obligation.creditor, null)�.role._party, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE);
-			
-		�ENDFOR�
-		
-		�FOR power:powers�
-			�power.name�_debtor : Party(�power.name�._name, �generateDotExpressionString(power.debtor, null)�.role._party, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
-			�power.name�_creditor : Party(�power.name�._name, �generateDotExpressionString(power.creditor, null)�.role._party, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE);
-			
-		�ENDFOR�
-		'''
-		return code
-	}
-	
-	
-	def String generateAssetProblemParameters(Attribute att) {
-		
-		val code = '''
-		�var done = false�
-		�IF att.domainType instanceof RegularType�
-		�val RegularType base = getBaseType(att.domainType)�
-		�IF base !== null�
-		�IF base.ontologyType.name == "Asset"�
-		�val astname = base.name�
-		�FOR asset : assets�
-		�IF asset.name == astname�
-		�FOR embatt : asset.attributes�
-		�var parentAst = generateAssetProblemParameters(embatt)�
-		�parentAst.replaceAll("owner,", "")�
-		�ENDFOR�
-		�{done = true; null}�
-		�ENDIF�
-		�ENDFOR�
-		�ENDIF�
-		�ENDIF�
-		�ENDIF�
-		�IF !done�
-			�val btype = att.baseType�
-			type : �btype.name�,
-			�IF btype.name.equals("Role")�
-			�ENDIF�
-			�IF btype.name.equals("Number")�
-			value : [1..1000],
-			�ENDIF�
-			�IF btype.name.equals("Date")�
-			value : [1..1000],
-			�ENDIF�
-			�IF btype.name.equals("String")�
-			value : [str1, str2, str3, str4],
-			�ENDIF�
-			�IF btype.name.equals("Boolean")�
-			value : [true, false],
-			�ENDIF�
-		�ENDIF�
-		'''
-		return code
-	}
-	
-	def String problemVariables(Parameter param) {
-		val code = '''
-		�param.name� : {
-			�val type = param.type�
-			�IF type.baseType !== null�
-				�val btype = type.baseType�
-				type : �btype.name�,
-				�IF btype.name.equals("Role")�
-				�ENDIF�
-				�IF btype.name.equals("Number")�
-				value : [1..1000],
-				�ENDIF�
-				�IF btype.name.equals("Date")�
-				value : [1..1000],
-				�ENDIF�
-				�IF btype.name.equals("String")�
-				value : [str1, str2, str3, str4],
-				�ENDIF�
-				�IF btype.name.equals("Boolean")�
-				value : [true, false],
-				�ENDIF�
-			�ELSEIF type.domainType !== null�
-				�IF type.domainType instanceof Enumeration�
-					type : Enumeration,
-					value : �getEnumItems(type.domainType as Enumeration)�
-				�ENDIF�
-			
-				�IF type.domainType instanceof RegularTypeImpl�
-					�var DomainType domainType = type.domainType�
-					�var RegularType base = getBaseType(domainType)�
-					�IF base !== null�
-						type : �base.baseType.name�,
-						�IF base.baseType.name == 'Role'�
-						�ENDIF�
-						
-						�IF base.baseType.name.equals("Asset")�
-						
-						value : {
-							�FOR att : base.attributes�
-								�generateAssetProblemParameters(att)�
-							�ENDFOR�
-						}
-						�ENDIF�
-					�ENDIF�
-				�ENDIF�
-			�ENDIF�
-		}
-		'''
-		return code
-	}
-	
-	def void generateProblemFile(IFileSystemAccess2 fsa, Model model) {
-		val code = '''
-		{
-			domain: �model.contractName�
-			argument: {
-						�FOR param : parameters� 	
-							�problemVariables(param)�
-						�ENDFOR�
-				}
-		}
-		'''
-		fsa.generateFile("./domain/contracts/problemFile_" + model.contractName + ".txt", code)
-	}
-	
-	def void generatePCSource(IFileSystemAccess2 fsa, Model model) {
-		parse(model)
-		compileDomainTypes(fsa, model.domainTypes)
-		compileContract(fsa, model)
-		generateProblemFile(fsa, model)
-	}
-	
-	def void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		for (e : resource.allContents.toIterable.filter(Model)) {
-			generatePCSource(fsa, e)
-		}
-	}
+    MODULE HappensAfter(event, time)
+     DEFINE _false  := (state = not_happened);
+          _true := (state = happened);
+     VAR state: {not_happened, happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event._active & next(event._happened) : happened;
+          TRUE : state;
+        esac;
+          
+    MODULE WhappensBeforeE(event1, event2)
+     DEFINE _false  := (state = not_happened);
+          _true := (state = happened);
+     VAR state: {not_happened, happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event1._active & next(event1._happened) & !(next(event2_happened)) : happened;
+          TRUE : state;
+        esac;
+      
+    MODULE ShappensBeforeE(event1, event2)
+     DEFINE _false  := (state = not_happened);
+            _true   := (state = ev1_ev2_happened);
+     VAR state: {not_happened, ev1_happened, ev1_ev2_happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event1._active & next(event1._happened) & !(next(event2_happened)) : ev1_happened;
+          state = ev1_happened & event2._active & next(event2._happened) : ev1_ev2_happened;
+          TRUE : state;
+     esac;
+      
+    MODULE HappensWithin(event, situation)
+     DEFINE _false  := (state = not_happened);
+            _true   := (state = happened);
+     VAR state: {happened, not_happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & event._active & next(event._happened) & situation._holds : happened;
+          TRUE : state;
+        esac; 
+    
+    MODULE HappensAfterE(event1, event2)
+     DEFINE _false  := (state = not_happened);
+            _true := (state = ev2_ev1_happened);
+    
+     VAR state: {not_happened, ev2_happened, ev2_ev1_happened};
+      ASSIGN
+          init(state) := not_happened;
+          next(state) := case
+          state = not_happened & !(next(event1_happened)) & event2._active & next(event2._happened) : ev2_happened;
+          state = ev2_happened & event1._active & next(event1._happened) : ev2_ev1_happened;
+          TRUE : state; 
+      esac;
+    '''
+    return code
+  }
+  /**
+   * Generate domain modules
+   */
+  def String getEnumItems(Enumeration enumeration){
+    var enums = ""
+    for(item : enumeration.enumerationItems) {
+      if(enums.length == 0) 
+        enums += '"' + item.name + '"'
+      else
+        enums += ',' + '"' + item.name + '"'
+    }
+    return enums
+  }
+   
+  def void generateEnumeration(Enumeration enumeration) {
+    pcEnumerations.add(getEnumItems(enumeration))
+  }
+  def void generateEvent(IFileSystemAccess2 fsa, RegularType event) {
+    val isBase = event.ontologyType !== null
+    if (isBase === true) {
+      // extract attributes of parents
+      var parameters = '''
+      «FOR att : event.attributes»
+      «att.name», 
+      «ENDFOR»
+      '''
+      
+      // trim parameters
+      parameters = parameters.replace("\r\n", "")
+      if(parameters.length() > 1)
+        parameters = parameters.substring(0, parameters.length()-2)
+      
+      // make nuXmv module
+      val code = '''
+        «IF event.attributes.size()>0»
+          MODULE «event.name»(start, «parameters»)
+        «ELSE»
+          MODULE «event.name»(start)
+        «ENDIF»         
+           VAR
+            event : Event(start);
+      '''
+      pcDomEvents.add(code)
+    } else if (event.regularType !== null) {
+      val parentType = event.regularType
+      val allAttributes = Helpers.getAttributesOfRegularType(event)
+      val parentAttributes = new ArrayList<Attribute>(allAttributes)
+      parentAttributes.removeAll(event.attributes)
+      
+      
+      // extract attributes of parents
+      var parameters = '''
+      «FOR att : event.attributes»
+      «generateAssetParameters(att)»
+      «ENDFOR»
+      «FOR att : parentAttributes»
+      «generateAssetParameters(att)»
+      «ENDFOR»
+      '''
+      
+      // trim parameters
+      parameters = parameters.replace("\r\n", "")
+      parameters = parameters.substring(0, parameters.length()-2)
+      
+      val code = '''
+        «IF allAttributes.size()>0»
+          MODULE «event.name»(start, «parameters»)
+           DEFINE
+              «FOR attribute : event.attributes»
+              «generateAssetAttributes(attribute)»
+              «ENDFOR»
+        «ELSE»
+          MODULE «event.name»(start)
+        «ENDIF»
+           VAR
+              event : «parentType.name»(start, «parentAttributes.map[Attribute a | a.name].join(',')»);
+      '''
+      pcDomEvents.add(code)
+    }
+  }
+  def void generateRole(IFileSystemAccess2 fsa, RegularType role) {
+    val isBase = role.ontologyType !== null
+    if (isBase === true) {
+      val code = '''
+        «IF role.attributes.map[Attribute a | a.name].length > 0»
+          MODULE «role.name»(party, «role.attributes.map[Attribute a | a.name].join(',')»)
+        «ELSE»
+          MODULE «role.name»(party)
+        «ENDIF»
+        «IF role.attributes.length > 0»
+           DEFINE
+            «FOR attribute : role.attributes»
+              _«attribute.name» := «attribute.name»;
+            «ENDFOR»
+        «ENDIF»
+           VAR
+              role : Role(party);
+      '''
+      pcRoles.add(code)
+    } else if (role.regularType !== null) {
+      val parentType = role.regularType
+      val allAttributes = Helpers.getAttributesOfRegularType(role)
+      val parentAttributes = new ArrayList<Attribute>(allAttributes)
+      parentAttributes.removeAll(role.attributes)
+      val code = '''
+        «IF allAttributes.map[Attribute a | a.name].length > 0»
+          MODULE «role.name»(party, «allAttributes.map[Attribute a | a.name].join(',')»)
+        «ELSE»
+          MODULE «role.name»(party)
+        «ENDIF»
+        «IF role.attributes.length > 0»
+           DEFINE
+            «FOR attribute : role.attributes»
+              _«attribute.name» := «attribute.name»;
+            «ENDFOR»
+        «ENDIF»
+            VAR
+              role : «parentType.name»(party, «parentAttributes.map[Attribute a | a.name].join(',')»);
+      '''
+      pcRoles.add(code)
+    }
+  }
+  
+  def String generateDomainModules () {
+    val code = '''
+    
+    «FOR role : pcRoles»
+    «role»
+    
+    «ENDFOR»
+    
+    «FOR asset : pcAssets»
+    «asset»
+    
+    «ENDFOR»
+    
+    «FOR event : pcDomEvents»
+    «event»
+    
+    «ENDFOR»
+    '''
+    return code
+  }
+  
+  def String generateConstants() {
+    val norms= new ArrayList<String>
+    for(obligation : obligations) 
+      norms.add('"' + obligation.name + '"')
+    for(power : powers)
+      norms.add('"' + power.name + '"')
+    
+    if(pcEnumerations.size() > 0) {
+      return pcEnumerations.join(",") + ',' + String.join(",", norms) + ';';      
+    }
+    else
+      return String.join(",", norms) + ';';
+  }
+  
+  def String generateRoleInstances() {
+    val code = '''
+    «FOR Map.Entry<String, Pair<String, String>> entry : roleInstances.entrySet()»
+    «entry.key» : «entry.value.key»(«entry.value.value»);
+    «ENDFOR»
+    '''
+    return code
+  }
+  
+  /**
+   * Description: convert Symboleos contract concept to SymboleoPCs module
+   * Principle: 2
+   */
+  def void compileContract(IFileSystemAccess2 fsa, Model model) {
+    var cntPrecondition = generateContractPreconditionSituation(model);
+    var cntTermination = generateContractTerminationSituation(model);
+    var cntSuspension = generateContractSuspensionSituation(model);
+    var cntResumption = generateContractResumptionSituation(model);
+    
+    var oblsTermination = generateObligationsTerminationSituation(model);
+    var oblsSuspension = generateObligationsSuspensionSituation(model);
+    var oblsResumption = generateObligationsResumptionSituation(model);
+    var oblsDiscard = generateObligationsDischargeSituation(model);
+    var oblsViolated = generateObligationViolatedSituation(model);
+    var oblsExpired = generateObligationExpiredSituation(model);    
+    
+    var powsExpired = generatePowerExpiredSituation(model);
+    var powsExerted = generatePowerExertedSituation(model);
+    
+    var antecedents = generateAntecedentsSituation(model);
+    var consequents = generateConsequentsSituation(model);
+    var triggers = generateTriggersSituation(model);
+    
+    val code = '''
+    «generateStaticModules()»
+    
+    --------------------------------------------------------------------------------------
+    -- CONTRACT DEPENDENT CONCEPTS
+    --------------------------------------------------------------------------------------
+    «generateDomainModules()»
+    
+    --------------------------------------------------------------------------------------
+    -- CONTRACT
+    --------------------------------------------------------------------------------------
+    MODULE «model.contractName» («pcParameters.join(', ')»)
+    
+      CONSTANTS
+      «generateConstants()»
+      
+      VAR
+        «compileDeclarationVariables(model)»
+        
+        cnt_succ_Termination : Situation((cnt.state=inEffect)
+        «FOR obligation: obligations» 
+        «IF !pcSurvivingObligations.contains(obligation.name)»
+        & !(«obligation.name»._active)
+        «ENDIF»
+        «ENDFOR»
+        );
+        
+        --------------
+        -- SITUATIONS
+        --------------
+        «getSituations()»
+        
+        cnt: Contract(TRUE, TRUE, «cntTermination», «cntSuspension», «cntResumption», FALSE, FALSE, cnt_succ_Termination._holds);
+          
+        --------------
+        -- OBLIGATIONS
+        --------------    
+        «FOR obligation: obligations»
+        «val antecedent = antecedents.get(obligation.name) !== null ? antecedents.get(obligation.name) : "TRUE"»
+        «val consequent = consequents.get(obligation.name)»
+        «val trigger = triggers.get(obligation.name) !== null ? triggers.get(obligation.name) : "TRUE"»
+        «val oblTerm = oblsTermination.get(obligation.name) !== null ? oblsTermination.get(obligation.name) : "FALSE"»
+        «val oblSus = oblsSuspension.get(obligation.name) !== null ? oblsSuspension.get(obligation.name) : "FALSE"»
+        «val oblRes = oblsResumption.get(obligation.name) !== null ? oblsResumption.get(obligation.name) : "FALSE"»
+        «val oblDisc = oblsDiscard.get(obligation.name) !== null ? oblsDiscard.get(obligation.name) : "FALSE"»
+        «val oblViol = oblsViolated.get(obligation.name) !== null ? oblsViolated.get(obligation.name) : "FALSE"»
+        «val oblExp = oblsExpired.get(obligation.name) !== null ? oblsExpired.get(obligation.name) : "FALSE"»
+        «val oblAct = "FALSE"»
+        «val isSurviving = pcSurvivingObligations.contains(obligation.name) ? "TRUE" : "FALSE"»
+        «val oblName = obligation.name»       
+        «oblName» : Obligation("«oblName»", «isSurviving», cnt._o_activated, «cntTermination», «consequent», «trigger», «oblViol», «oblAct», «oblExp», «oblSus», «cntSuspension», «oblTerm», «oblRes», «cntResumption», «oblDisc», «antecedent»);
+            
+        «ENDFOR»
+        
+        --------------
+        -- POWERS
+        --------------
+        «FOR power: powers»
+        «val antecedent = antecedents.get(power.name) !== null ? antecedents.get(power.name) : "TRUE"»
+        «val trigger = triggers.get(power.name) !== null ? triggers.get(power.name) : "TRUE"»
+        «val powAct = "FALSE"»
+        «val powSus = "FALSE"»
+        «val powTerm = "FALSE"»
+        «val powRes = "FALSE"»
+        «val powName = power.name»
+        «val powExe = powsExerted.get(power.name) !== null ? powsExerted.get(power.name) : "FALSE"»
+        «val powExp = powsExpired.get(power.name) !== null ? powsExpired.get(power.name) : "FALSE"»       
+        «power.name» : Power("«powName»", cnt._o_activated, «trigger», «powAct», «powExp», «powSus», «cntSuspension», «powTerm», «powExe», «powRes», «cntResumption», «antecedent»);
+        
+        «ENDFOR»
+        
+        --------------
+        -- PARTIES
+        --------------
+        «compileParties()»
+        
+        --------------
+        -- CONSTRAINTS
+        --------------
+        «compileConstraints(cntPrecondition)»
+    '''
+    fsa.generateFile("./domain/contracts/" + model.contractName + ".smv", code)
+  } 
+  
+  def void compileDomainTypes(IFileSystemAccess2 fsa, List<DomainType> domainTypes) {
+    for (asset : assets) {
+      generateAsset(fsa, asset)
+    }
+    for (event : events) {
+      generateEvent(fsa, event)
+    }
+    for (role : roles) {
+      generateRole(fsa, role)
+    }
+    // should update
+    for (enumeration : enumerations) {
+      generateEnumeration(enumeration)
+    }
+  }
+  
+  /*def String generateAssetAttributes(Attribute att) {
+    
+    val code = '''
+    «var done = false»
+    «IF att.domainType instanceof RegularType»
+    «val RegularType base = getBaseType(att.domainType)»
+    «IF base !== null»
+    «IF base.ontologyType.name == "Asset"»
+    «val astname = base.name»
+    «FOR asset : assets»
+    «IF asset.name == astname»
+    «FOR embatt : asset.attributes»
+    «val parentAtt = generateAssetAttributes(embatt)»
+    «parentAtt.replaceAll(".*_owner :=.*(\r | \r\n)?", "")»   
+    «ENDFOR»
+    «{done = true; null}»
+    «ENDIF»
+    «ENDFOR»
+    «ENDIF»
+    «ENDIF»
+    «ENDIF»
+    «IF !done»
+      _«att.name» := «att.name»;
+    «ENDIF»
+    '''
+    return code
+  }*/
+  
+  def String generateAssetAttributes(Attribute att) {
+    /*val code = '''
+    «var done = false»
+    «IF att.domainType instanceof RegularType»
+    «val RegularType base = getBaseType(att.domainType)»
+    «IF base !== null»
+    «IF base.ontologyType.name == "Asset"»
+    «val astname = base.name»
+    «FOR asset : assets»
+    «IF asset.name == astname»
+    «FOR embatt : asset.attributes»
+    «val parentAtt = generateAssetAttributes(embatt)»
+    «parentAtt.replaceAll(".*_owner :=.*(\r | \r\n)?", "")»   
+    «ENDFOR»
+    «{done = true; null}»
+    «ENDIF»
+    «ENDFOR»
+    «ENDIF»
+    «ENDIF»
+    «ENDIF»
+    «IF !done»
+      _«att.name» := «att.name»;
+    «ENDIF»
+    '''*/
+    
+    val code = '''
+    «var done = false»
+    «IF att.domainType instanceof RegularType»
+    «val RegularType base = getBaseType(att.domainType)»
+    «IF base !== null»
+    «IF base.ontologyType.name == "Asset"»
+    «val astname = base.name»
+    «FOR asset : assets»
+    «IF asset.name == astname»
+    «{done = true; null}»
+    «ENDIF»
+    «ENDFOR»
+    «ENDIF»
+    «ENDIF»
+    «ENDIF»
+    «IF !done»
+      _«att.name» := «att.name»;
+    «ENDIF»
+    '''
+    
+    return code
+  }
+  
+  def String generateAssetParameters(Attribute att) {
+    
+    val code = '''
+    «var done = false»
+    «IF att.domainType instanceof RegularType»
+    «val RegularType base = getBaseType(att.domainType)»
+    «IF base !== null»
+    «IF base.ontologyType.name == "Asset"»
+    «val astname = base.name»
+    «FOR asset : assets»
+    «IF asset.name == astname»
+    «FOR embatt : asset.attributes»
+    «var parentAst = generateAssetParameters(embatt)»
+    «parentAst.replaceAll("owner,", "")»
+    «ENDFOR»
+    «{done = true; null}»
+    «ENDIF»
+    «ENDFOR»
+    «ENDIF»
+    «ENDIF»
+    «ENDIF»
+    «IF !done»
+      «att.name», 
+    «ENDIF»
+    '''
+    return code
+  }
+  
+  def void generateAsset(IFileSystemAccess2 fsa, RegularType asset) {
+    val isBase = asset.ontologyType !== null
+    
+    // challenge: add owner as a keyword and a default attribute of assets    
+    if (isBase === true) {
+      var parameters = '''
+      «FOR att : asset.attributes»
+      «att.name», 
+      «ENDFOR»
+      '''
+      
+      // trim parameters
+      parameters = parameters.replace("\r\n", "")
+      if(parameters.length() > 1)
+        parameters = parameters.substring(0, parameters.length()-2)
+      
+      // make nuXmv module
+      val code = '''
+        «IF asset.attributes.size()>0»
+          MODULE «asset.name» («parameters»)
+        «ELSE»
+          MODULE «asset.name» ()  
+        «ENDIF»   
+           VAR
+              asset:Asset(owner);
+      '''
+      pcAssets.add(code)
+    } else if (asset.regularType !== null) {
+      val parentType = asset.regularType
+      val allAttributes = Helpers.getAttributesOfRegularType(asset)
+      val parentAttributes = new ArrayList<Attribute>(allAttributes)
+      parentAttributes.removeAll(asset.attributes)
+      
+      var parameters = ""
+      for(att : asset.attributes) {
+        var param = generateAssetParameters(att)
+        
+        // trim parameters
+        param = param.replace("\r\n", "")
+        if(param.length() > 1){
+          param = param.substring(0, param.length()-2)
+          parameters += param
+        }
+      }
+      
+      var parentParams = ""
+      for(att : parentAttributes) {
+        var param = generateAssetParameters(att)
+                
+        // trim parameters
+        param = param.replace("\r\n", "")
+        if(param.length() > 1){
+          param = param.substring(0, param.length()-2)
+          
+          if(!param.equals("owner")){
+            if(parameters.length == 0)
+              parameters += param
+            else 
+              parameters += ', ' + param            
+          }
+          if(parentParams.length == 0)
+            parentParams += param
+          else
+            parentParams += ', ' + param
+        }
+      }
+      
+      val code = '''
+        MODULE «asset.name» («parameters»)
+        «IF asset.attributes.size()>0»
+         DEFINE 
+            «FOR attribute : asset.attributes»
+              «generateAssetAttributes(attribute)»
+            «ENDFOR»
+            «FOR attribute : parentAttributes»
+            «IF !attribute.name.equals("owner")»
+              «generateAssetAttributes(attribute)»
+            «ENDIF»
+            «ENDFOR»
+        «ENDIF»
+         VAR
+            asset:«parentType.name»(«parentParams»);
+      '''
+      pcAssets.add(code)
+    }
+  }
+  
+  def String generateEventInitSituation (Model model, String eventName) {
+    var List<String> situations = new ArrayList<String>()
+    var String situation = "";
+      
+    for(obligation: model.obligations) {
+      var propositions = obligationAntecedentEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {       
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add(obligation.name + ".state=create")         
+          }
+        } 
+      
+      propositions = obligationConsequentEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add(obligation.name + ".state=inEffect")
+          } 
+        } 
+      
+      propositions = obligationTriggerEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add("cnt.state=inEffect")
+          }
+        }   
+    }
+    
+    for(obligation: model.survivingObligations) {
+      var propositions = obligationAntecedentEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {       
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add(obligation.name + ".state=create")         
+          }
+        } 
+      
+      propositions = obligationConsequentEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add(obligation.name + ".state=inEffect")
+          } 
+        } 
+      
+      propositions = obligationTriggerEvents.get(obligation)
+      if(propositions !== null)
+        for(p : propositions) {
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add("cnt.state=inEffect")
+          }
+        }   
+    }
+    
+    for(power: model.powers) {
+      var propositions = powerAntecedentEvents.get(power)
+      if(propositions !== null)
+        for(p : propositions) {       
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add(power.name + ".state=create")          
+          }
+        } 
+      
+      propositions = powerTriggerEvents.get(power)
+      if(propositions !== null)
+        for(p : propositions) {
+          var ev = getEvent(p.predicateFunction)
+          if(ev.equals(eventName)){
+            situations.add("cnt.state=inEffect")
+          }
+        }   
+    }
+      
+    for(s : situations) {
+      if(situation === ""){
+        situation = s;
+      }
+      else{
+        situation += " | " + s;
+      }
+    }
+    return situation
+  }
+  
+  
+  def void addDeclarationVariables (Model model) {
+    for(variable: model.variables) {    
+      var situation = generateEventInitSituation(model, variable.name); //this is used only for events
+      var assgs = new ArrayList<Pair<String, String>>
+      
+      if(variable.type instanceof RegularType)
+        for(assignment: variable.attributes){
+          /*if(assignment instanceof AssignVariable){
+            var found = false
+            val asgexp = generateDotExpressionString(assignment.value, null)
+            for(ast:pcVariables) {
+              if(ast.name.equals(asgexp)) {
+                for(p:ast.parameters) {
+                  if(!p.key.equals("owner"))
+                    assgs.add(p)                  
+                  }
+                found = true
+              }             
+            }
+            if(!found) {
+              assgs.add(new Pair(assignment.name, generateDotExpressionString(assignment.value, null)))             
+              }     
+          }
+          else if(assignment instanceof AssignExpression)
+            assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))*/
+  
+  
+          if(assignment instanceof AssignVariable)
+              assgs.add(new Pair(assignment.name, generateDotExpressionString(assignment.value, null)))               
+          else if(assignment instanceof AssignExpression)
+            assgs.add(new Pair(assignment.name, generateExpressionString(assignment.value, null)))            
+            }
+      addVariable(variable.name, situation, variable.type.name, assgs)
+    }
+  }
+  
+  def String compileDeclarationVariables(Model model) {
+    // Convert explicit variables
+    addDeclarationVariables(model)
+    
+    // Convert implicit variables
+    var code = ""
+    for(variable : pcVariables) {
+      var params = ""
+      if(variable.starter !== null)
+        params += variable.starter
+      
+      if(variable.parameters !== null)
+        for(param : variable.parameters) {
+          if(params.length > 0)
+            params += ", " + param.value
+          else
+            params += param.value
+        }     
+      code += variable.name + " :" + variable.type + "(" + params + ");\n\n"
+    }
+    return code;
+  }
+  
+  def String compileConstraints(String cntPrecondition) {
+    
+    // implicit constraints   
+    for(var i =0; i< predicates.size; i++) {
+      for(var j = i+1; j< predicates.size; j++) {
+        
+        // constrain1: HappensBefore(event1, time1) and HappensAfter(event2, time2) and time1<time2
+        if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(j).predicate == predicateType.HAPPENSAFTER && 
+          predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
+            pcConstraints.add("(" + predicates.get(i).time1.time + " < " + predicates.get(j).time1.time + " & " + 
+              predicates.get(j).event + ".state = active ->" + predicates.get(i).event + "._happened | " 
+              + predicates.get(i).event + "._expired" + ")")          
+        }   
+        
+        if(predicates.get(i).predicate == predicateType.HAPPENSAFTER && (predicates.get(j).predicate == predicateType.SHAPPENSBEFORE || predicates.get(j).predicate == predicateType.WHAPPENSBEFORE) &&
+          predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
+            pcConstraints.add("(" + predicates.get(j).time1.time + " < " + predicates.get(i).time1.time + " & " + 
+              predicates.get(i).event + ".state = active ->" + predicates.get(j).event + "._happened | " 
+              + predicates.get(j).event + "._expired" + ")")          
+        } 
+        
+        // constrain2: HappensBefore(event1, time1) and HappensWithin(event2, time2, time3) and time1<time2
+        if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(j).predicate == predicateType.HAPPENSWITHIN &&
+          predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE) {
+            pcConstraints.add("(" + predicates.get(i).time1.time + " < " + predicates.get(j).time1.time + " & " + 
+              predicates.get(j).event + ".state = active ->" + predicates.get(i).event + "._happened | " 
+              + predicates.get(i).event + "._expired" + ")")  
+          
+        }
+        
+        if(predicates.get(i).predicate == predicateType.HAPPENSWITHIN && (predicates.get(j).predicate == predicateType.SHAPPENSBEFORE || predicates.get(j).predicate == predicateType.WHAPPENSBEFORE) &&
+          predicates.get(i).time1.type == Tpoint.Type.VARIABLE && predicates.get(j).time1.type == Tpoint.Type.VARIABLE
+        ) {
+            pcConstraints.add("(" + predicates.get(j).time1.time + " < " + predicates.get(i).time1.time + " & " + 
+              predicates.get(i).event + ".state = active ->" + predicates.get(j).event + "._happened | " 
+              + predicates.get(j).event + "._expired" + ")")  
+          
+        }               
+      }
+      
+      // HappensBefore(event1, event2)
+      if((predicates.get(i).predicate == predicateType.SHAPPENSBEFORE || predicates.get(i).predicate == predicateType.WHAPPENSBEFORE) && predicates.get(i).time1.type == Tpoint.Type.EVENT) {
+            pcConstraints.add("(" + predicates.get(i).time1.time + "._happened ->" + predicates.get(i) + "._true" + ")")  
+          
+        }     
+    }
+    
+    // explicit constraints
+    var econstr = ""
+    var first = true
+    for(cntr:constraints) {
+      var constValue = generatePropositionString(null, null, null, cntr)
+      if(constValue !== null){
+        if(first) {
+          econstr += constValue
+          first = false
+        }
+        else
+          econstr += '&' + constValue
+      }
+    }
+    
+    val iconstr = '''«pcConstraints.size() > 0 ? pcConstraints.join(' & ') : ""»'''
+        
+    var fullconstr = ""
+    if(cntPrecondition.length > 0 || econstr.length() > 0 || iconstr.length() > 0) {
+      fullconstr += "INVAR \n\t"
+      if(cntPrecondition.length > 0){
+        fullconstr += cntPrecondition
+        if(econstr.length() > 0)
+          fullconstr += ' & ' + econstr
+        if(iconstr.length() > 0)
+          fullconstr += ' & ' + iconstr         
+        }
+      else
+        if(econstr.length() > 0){
+          fullconstr += econstr
+          if(iconstr.length() > 0)
+          fullconstr += ' & ' + iconstr         
+        }
+        else
+          fullconstr += iconstr
+      }
+    
+    return fullconstr+';'
+  }
+  
+  def String compileParties() {
+    val code = '''    
+    «FOR obligation:obligations»
+      «obligation.name»_debtor : Party(«obligation.name»._name, «generateDotExpressionString(obligation.debtor, null)».role._party, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
+      «obligation.name»_creditor : Party(«obligation.name»._name, «generateDotExpressionString(obligation.creditor, null)».role._party, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE);
+      
+    «ENDFOR»
+    
+    «FOR power:powers»
+      «power.name»_debtor : Party(«power.name»._name, «generateDotExpressionString(power.debtor, null)».role._party, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE);
+      «power.name»_creditor : Party(«power.name»._name, «generateDotExpressionString(power.creditor, null)».role._party, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE);
+      
+    «ENDFOR»
+    '''
+    return code
+  }
+  
+  
+  def String generateAssetProblemParameters(Attribute att) {
+    
+    val code = '''
+    «var done = false»
+    «IF att.domainType instanceof RegularType»
+    «val RegularType base = getBaseType(att.domainType)»
+    «IF base !== null»
+    «IF base.ontologyType.name == "Asset"»
+    «val astname = base.name»
+    «FOR asset : assets»
+    «IF asset.name == astname»
+    «FOR embatt : asset.attributes»
+    «var parentAst = generateAssetProblemParameters(embatt)»
+    «parentAst.replaceAll("owner,", "")»
+    «ENDFOR»
+    «{done = true; null}»
+    «ENDIF»
+    «ENDFOR»
+    «ENDIF»
+    «ENDIF»
+    «ENDIF»
+    «IF !done»
+      «val btype = att.baseType»
+      type : «btype.name»,
+      «IF btype.name.equals("Role")»
+      «ENDIF»
+      «IF btype.name.equals("Number")»
+      value : [1..1000],
+      «ENDIF»
+      «IF btype.name.equals("Date")»
+      value : [1..1000],
+      «ENDIF»
+      «IF btype.name.equals("String")»
+      value : [str1, str2, str3, str4],
+      «ENDIF»
+      «IF btype.name.equals("Boolean")»
+      value : [true, false],
+      «ENDIF»
+    «ENDIF»
+    '''
+    return code
+  }
+  
+  def String problemVariables(Parameter param) {
+    val code = '''
+    «param.name» : {
+      «val type = param.type»
+      «IF type.baseType !== null»
+        «val btype = type.baseType»
+        type : «btype.name»,
+        «IF btype.name.equals("Role")»
+        «ENDIF»
+        «IF btype.name.equals("Number")»
+        value : [1..1000],
+        «ENDIF»
+        «IF btype.name.equals("Date")»
+        value : [1..1000],
+        «ENDIF»
+        «IF btype.name.equals("String")»
+        value : [str1, str2, str3, str4],
+        «ENDIF»
+        «IF btype.name.equals("Boolean")»
+        value : [true, false],
+        «ENDIF»
+      «ELSEIF type.domainType !== null»
+        «IF type.domainType instanceof Enumeration»
+          type : Enumeration,
+          value : «getEnumItems(type.domainType as Enumeration)»
+        «ENDIF»
+      
+        «IF type.domainType instanceof RegularTypeImpl»
+          «var DomainType domainType = type.domainType»
+          «var RegularType base = getBaseType(domainType)»
+          «IF base !== null»
+            type : «base.baseType.name»,
+            «IF base.baseType.name == 'Role'»
+            «ENDIF»
+            
+            «IF base.baseType.name.equals("Asset")»
+            
+            value : {
+              «FOR att : base.attributes»
+                «generateAssetProblemParameters(att)»
+              «ENDFOR»
+            }
+            «ENDIF»
+          «ENDIF»
+        «ENDIF»
+      «ENDIF»
+    }
+    '''
+    return code
+  }
+  
+  def void generateProblemFile(IFileSystemAccess2 fsa, Model model) {
+    val code = '''
+    {
+      domain: «model.contractName»
+      argument: {
+            «FOR param : parameters»  
+              «problemVariables(param)»
+            «ENDFOR»
+        }
+    }
+    '''
+    fsa.generateFile("./domain/contracts/problemFile_" + model.contractName + ".txt", code)
+  }
+  
+  def void generatePCSource(IFileSystemAccess2 fsa, Model model) {
+    parse(model)
+    compileDomainTypes(fsa, model.domainTypes)
+    compileContract(fsa, model)
+    generateProblemFile(fsa, model)
+  }
+  
+  def void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+    for (e : resource.allContents.toIterable.filter(Model)) {
+      generatePCSource(fsa, e)
+    }
+  }
 }

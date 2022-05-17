@@ -104,6 +104,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.OntologyType
 import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDate
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomDateLiteral
 import java.time.format.DateTimeFormatter
+import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensAfter
 
 //
 /**
@@ -141,6 +142,10 @@ class SymboleoGenerator extends AbstractGenerator {
   val untriggeredObligations = new ArrayList<Obligation>
   val untriggeredSurvivingObligations = new ArrayList<Obligation>
   val untriggeredPowers = new ArrayList<Power>
+  
+  val triggeredObligations = new ArrayList<Obligation>
+  val triggeredSurvivingObligations = new ArrayList<Obligation>
+  val triggeredPowers = new ArrayList<Power>
   
   val allObligations = new ArrayList<Obligation>
   val allSurvivingObligations = new ArrayList<Obligation>
@@ -199,7 +204,10 @@ class SymboleoGenerator extends AbstractGenerator {
     for (obligation : model.obligations) {
       if (obligation.trigger !== null) {
         untriggeredObligations.add(obligation)
-      } else if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
+      } else {
+        triggeredObligations.add(obligation)
+      }
+      if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
         triggeredUnconditionalObligations.add(obligation)
       } else {
         triggeredConditionalObligations.add(obligation)
@@ -208,7 +216,10 @@ class SymboleoGenerator extends AbstractGenerator {
     for (obligation : model.survivingObligations) {
       if (obligation.trigger !== null) {
         untriggeredSurvivingObligations.add(obligation)
-      } else if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
+      } else {
+        triggeredSurvivingObligations.add(obligation)
+      }
+      if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
         triggeredUnconditionalSurvivingObligations.add(obligation)
       } else {
         triggeredConditionalSurvivingObligations.add(obligation)
@@ -217,7 +228,10 @@ class SymboleoGenerator extends AbstractGenerator {
     for (power : model.powers) {
       if (power.trigger !== null) {
         untriggeredPowers.add(power)
-      } else if (power.antecedent instanceof PAtomPredicateTrueLiteral) {
+      } else {
+        triggeredPowers.add(power)
+      }
+      if (power.antecedent instanceof PAtomPredicateTrueLiteral) {
         triggeredUnconditionalPowers.add(power)
       } else {
         triggeredConditionalPowers.add(power)
@@ -225,14 +239,11 @@ class SymboleoGenerator extends AbstractGenerator {
     }
     
     allObligations.addAll(untriggeredObligations)
-    allObligations.addAll(triggeredUnconditionalObligations)
-    allObligations.addAll(triggeredConditionalObligations)
+    allObligations.addAll(triggeredObligations)
     allSurvivingObligations.addAll(untriggeredSurvivingObligations)
-    allSurvivingObligations.addAll(triggeredUnconditionalSurvivingObligations)
-    allSurvivingObligations.addAll(triggeredConditionalSurvivingObligations)
+    allSurvivingObligations.addAll(triggeredSurvivingObligations)
     allPowers.addAll(untriggeredPowers)
-    allPowers.addAll(triggeredUnconditionalPowers)
-    allPowers.addAll(triggeredConditionalPowers)
+    allPowers.addAll(triggeredPowers)
 
     // collect trigger events
     for (obligation : untriggeredObligations) {
@@ -314,12 +325,11 @@ class SymboleoGenerator extends AbstractGenerator {
           "start": "fabric-chaincode-node start"
         },
         "engineStrict": true,
-        "author": "Hyperledger",
-        "license": "Apache-2.0",
+        "author": "Symboleo2SC",
         "dependencies": {
           "fabric-contract-api": "^2.2.2",
           "fabric-shim": "^2.2.2",
-          "symboleo-js-core": "^1.0.9"
+          "symboleo-js-core": "^1.0.12"
         },
         "devDependencies": {
           "chai": "^4.1.2",
@@ -426,9 +436,8 @@ class SymboleoGenerator extends AbstractGenerator {
       }
     
       for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
-        if (object[key]._triggered === true) {
-          contract[key]._triggered = true
-          contract[key]._timestamp = object[key]._timestamp
+        for(const eKey of Object.keys(object[key])) {
+          contract[key][eKey] = object[key][eKey]
         }
       }
     
@@ -668,6 +677,7 @@ class SymboleoGenerator extends AbstractGenerator {
       switch (pf) {
         PredicateFunctionHappens: line.append(generateEventObjectString(pf.event) + ', ')
         PredicateFunctionWHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
+        PredicateFunctionHappensAfter: line.append(generateEventObjectString(pf.event) + ', ')
         PredicateFunctionSHappensBefore: {
           line.append(generateEventObjectString(pf.event) + ', ')
           val res = generatePointEventObjectString(pf.point.pointExpression)
@@ -820,6 +830,7 @@ class SymboleoGenerator extends AbstractGenerator {
   def String generatePredicateFunctionString(PredicateFunction predicate) {
     switch (predicate) {
       PredicateFunctionHappens: return '''Predicates.happens(«generateEventVariableString(predicate.event)»)'''
+      PredicateFunctionHappensAfter: return '''Predicates.happensAfter(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)»)'''
       PredicateFunctionWHappensBefore: return '''Predicates.weakHappensBefore(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)»)'''
       PredicateFunctionSHappensBefore: return '''Predicates.strongHappensBefore(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)»)'''
       PredicateFunctionHappensWithin: return '''Predicates.happensWithin(«generateEventVariableString(predicate.event)», «generateIntervalExpresionArgString(predicate.interval.intervalExpression)»)'''
@@ -1171,26 +1182,27 @@ class SymboleoGenerator extends AbstractGenerator {
         const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(',')»)
         this.initialize(contractInstance)
         if (contractInstance.activated()) {
-          // call triggeredUnconditional for legal positions
-          «FOR obligation : triggeredUnconditionalObligations»
-            contractInstance.obligations.«obligation.name».trigerredUnconditional()
+          // call trigger transitions for legal positions
+          «FOR obligation : triggeredObligations»
+            «IF obligation.antecedent instanceof PAtomPredicateTrueLiteral»
+              contractInstance.obligations.«obligation.name».trigerredUnconditional()
+            «ELSE»
+              contractInstance.obligations.«obligation.name».trigerredConditional()
+            «ENDIF»
           «ENDFOR»
-          «FOR obligation : triggeredUnconditionalSurvivingObligations»
-            contractInstance.survivingObligations.«obligation.name».trigerredUnconditional()
+          «FOR obligation : triggeredSurvivingObligations»
+            «IF obligation.antecedent instanceof PAtomPredicateTrueLiteral»  
+              contractInstance.survivingObligations.«obligation.name».trigerredUnconditional()
+            «ELSE»
+              contractInstance.survivingObligations.«obligation.name».trigerredConditional()
+            «ENDIF»
           «ENDFOR»
-          «FOR power : triggeredUnconditionalPowers»
-            contractInstance.powers.«power.name».trigerredUnconditional()
-          «ENDFOR»
-      
-          // call triggeredConditional for legal positions
-          «FOR obligation : triggeredConditionalObligations»
-            contractInstance.obligations.«obligation.name».trigerredConditional()
-          «ENDFOR»
-          «FOR obligation : triggeredConditionalSurvivingObligations»
-            contractInstance.survivingObligations.«obligation.name».trigerredConditional()
-          «ENDFOR»
-          «FOR power : triggeredConditionalPowers»
-            contractInstance.powers.«power.name».trigerredConditional()
+          «FOR power : triggeredPowers»
+            «IF power.antecedent instanceof PAtomPredicateTrueLiteral» 
+              contractInstance.powers.«power.name».trigerredUnconditional()
+            «ELSE»
+              contractInstance.powers.«power.name».trigerredConditional()
+            «ENDIF»
           «ENDFOR»
       
           await ctx.stub.putState(contractInstance.id, Buffer.from(serialize(contractInstance)))
@@ -1251,24 +1263,15 @@ class SymboleoGenerator extends AbstractGenerator {
           «ENDFOR»
           
           // create instance of triggered obligations
-          «FOR obligation : triggeredConditionalObligations»
+          «FOR obligation : triggeredObligations»
             this.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
           «ENDFOR»
-          «FOR obligation : triggeredUnconditionalObligations»
-            this.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this)
-          «ENDFOR»
-          «FOR obligation : triggeredConditionalSurvivingObligations»
+          «FOR obligation : triggeredSurvivingObligations»
             this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this, true)
           «ENDFOR»
-          «FOR obligation : triggeredUnconditionalSurvivingObligations»
-            this.survivingObligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'this')», «generateDotExpressionString(obligation.debtor, 'this')», this, true)
-          «ENDFOR»          
-          «FOR power : triggeredConditionalPowers»
+          «FOR power : triggeredPowers»
             this.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'this')», «generateDotExpressionString(power.debtor, 'this')», this)
           «ENDFOR»
-          «FOR power : triggeredUnconditionalPowers»
-            this.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'this')», «generateDotExpressionString(power.debtor, 'this')», this)
-          «ENDFOR»          
         }
       }
       
@@ -1559,8 +1562,14 @@ class SymboleoGenerator extends AbstractGenerator {
       untriggeredSurvivingObligations.clear()
       untriggeredPowers.clear()
       
+      
+      triggeredObligations.clear()
+      triggeredSurvivingObligations.clear()
+      triggeredPowers.clear()
+      
       allObligations.clear()
       allSurvivingObligations.clear()
+      allPowers.clear()
 
       eventVariables.clear()
 
@@ -1598,8 +1607,14 @@ class SymboleoGenerator extends AbstractGenerator {
     untriggeredObligations.clear()
     untriggeredSurvivingObligations.clear()
     untriggeredPowers.clear()
+
+    triggeredObligations.clear()
+    triggeredSurvivingObligations.clear()
+    triggeredPowers.clear()
+    
     allObligations.clear()
     allSurvivingObligations.clear()
+    allPowers.clear()
 
     eventVariables.clear()
 
