@@ -183,9 +183,11 @@ PredicateFunction:
 	{PredicateFunctionHappens} name='Happens' '(' event=Event ')' |
 	{PredicateFunctionWHappensBefore} name='WhappensBefore' '(' event=Event ',' point=Point ')' |
 	{PredicateFunctionSHappensBefore} name='ShappensBefore' '(' event=Event ',' point=Point ')' |
+	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'|
+	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
+	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionHappensWithin} name='HappensWithin' '(' event=Event ',' interval=Interval ')'
-//	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
+	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' 
 	;
 
 OtherFunction:
@@ -281,3 +283,4 @@ ContractState:
 
 ContractStateName:
 	'Form' | 'UnAssign' | 'InEffect' | 'Suspension' | 'Rescission' | 'SuccessfulTermination' | 'UnsuccessfulTermination' | 'Active';
+  
