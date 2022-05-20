@@ -143,6 +143,7 @@ PowerFunction returns PowerFunction:
 	{PFObligationResumed} action = 'Resumed' '(' 'obligations.' norm = [Obligation] ')' | 
 	{PFObligationDischarged} action = 'Discharged' '(' 'obligations.' norm = [Obligation] ')' |
 	{PFObligationTerminated} action = 'Terminated' '(' 'obligations.' norm = [Obligation] ')' |
+	{PFObligationTriggered} action = 'Triggered' '(' 'obligations.' norm = [Obligation] ')' |
 	//{PFPowerSuspended} action = 'Suspended_' '(' norm = [Power] ')' | 
 	//{PFPowerResumed} action = 'Resumed_' '(' norm = [Power] ')' | 
 	//{PFPowerTerminated} action = 'Terminated_' '(' norm = [Power] ')' |

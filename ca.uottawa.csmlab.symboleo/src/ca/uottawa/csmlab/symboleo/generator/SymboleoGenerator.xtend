@@ -105,6 +105,7 @@ import ca.uottawa.csmlab.symboleo.symboleo.AtomicExpressionDate
 import ca.uottawa.csmlab.symboleo.symboleo.PAtomDateLiteral
 import java.time.format.DateTimeFormatter
 import ca.uottawa.csmlab.symboleo.symboleo.PredicateFunctionHappensAfter
+import ca.uottawa.csmlab.symboleo.symboleo.PFObligationTriggered
 
 //
 /**
@@ -1047,6 +1048,9 @@ class SymboleoGenerator extends AbstractGenerator {
         PFObligationTerminated:
           methods.add(
             generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'terminated'))
+        PFObligationTriggered:
+          methods.add(
+            generatePowerTransactionForObligation(power.name, powerFunction.norm.name, 'triggered'))    
         PFContractSuspended:
           methods.add(generatePowerTransactionForContract(power.name, 'suspended'))
         PFContractResumed:
@@ -1060,7 +1064,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String generatePowerTransactionForObligation(String powerName, String obligationName, String stateMethod) {
     return '''
-    async power_«stateMethod»Obligation_«obligationName»(ctx, contractId) {
+    async p_«powerName»_«stateMethod»_o_«obligationName»(ctx, contractId) {
       const contractState = await ctx.stub.getState(contractId)
       if (contractState == null) {
         return {successful: false}
@@ -1069,8 +1073,12 @@ class SymboleoGenerator extends AbstractGenerator {
       this.initialize(contract)
     
       if (contract.isInEffect() && contract.powers.«powerName» != null && contract.powers.«powerName».isInEffect()) {
+        «IF stateMethod.equals("triggered")»
+        if (contract.powers.«powerName».exerted()) {
+        «ELSE»
         const obligation = contract.«isSurvivingObligation(obligationName) ? "survivingObligations" : "obligations"».«obligationName»
         if (obligation != null && obligation.«stateMethod»() && contract.powers.«powerName».exerted()) {
+        «ENDIF»
           await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
           return {successful: true}
         } else {
@@ -1084,7 +1092,7 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String generatePowerTransactionForContract(String powerName, String stateMethod) {
     return '''
-    async power_«stateMethod»Contract(ctx, contractId) {
+    async p_«powerName»_«stateMethod»_contract(ctx, contractId) {
       const contractState = await ctx.stub.getState(contractId)
       if (contractState == null) {
         return {successful: false}
