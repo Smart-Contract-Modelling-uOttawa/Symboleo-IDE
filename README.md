@@ -28,10 +28,10 @@ The current version of the text editor created by Xtext has implemented the synt
 |Basic Conepts|Ontological Concepts|
 |-------------|--------------------|
 |`Enumeration`|`Event`             |
-|`STRING`     |`ASSET`             |
-|`NUMBER`     |`SITUATION`         |
-|`DATE`       |`ROLE`              |
-|-            |`CONTRACT`          |
+|`String`     |`Asset`             |
+|`Number`     |`Role`              |
+|`Date`       |`Contract`          |
+|`Boolean`    |                    |
 
 - The contrct body has the following parts:
 
@@ -39,72 +39,69 @@ The current version of the text editor created by Xtext has implemented the synt
 |---------------------|-----------|----------------|
 |`Contract Signature` |contract template ID and contract parameters are defined|`Contract ID` & contract `parameters` and their type|
 |`Declarations`|the parameters are bound to the variables which are defined based on the `Domain Model` of the contract|`var`**`isA`**`Type`**`where`**`att_1:=param_1`**`,`**...|
-|`Preconditions`|the logical propositions that must be satisfied before a contract can be executed|logical proposition (`prop`)|
-|`Postconditions`|the logical propositions that must be satisfied after a contract is executed|logical proposition (`prop`)|
-|`Obligations`|obligations have a name, a trigger(*optional*), two roles, an antecedent and a consequent. the trigger when satisfied, creates an instance of the obligation, while satisfying its antecedent will bring it to an *active state*, i.e. the debtor of the obligation _**must**_ satisfy the consequent.| `oblName`**`:`**`trigger:Prop`**`-> O(`**`debtor:Role` **`,`**`creditor:Role`**`,`**`antecedent:Prop`**`,`**`consequent:Prop`**`)`**|
-|`Powers`|powers have a name, a trigger(*optional*), two roles, an antecedent and a consequent. the trigger when satisfied, creates an instance of the power, while satisfying its antecedent will bring it to an *active state*, i.e. the creditor of the power _**can**_ satisfy the consequent which is usually about creating, suspending, resuming or terminating the obligations/contract.| `powName`**`:`**`trigger:Prop`**`-> P(`**`creditor:Role` **`,`**`debtor:Role`**`,`**`antecedent:Prop`**`,`**`consequent:Prop`**`)`**|
-|`Constraints`|the logical propositions that must be always satisfied during the execution of the contract|logical proposition (`prop`)|
+|`Preconditions`|the logical propositions that must be satisfied before a contract can be executed|logical proposition (`Proposition`)|
+|`Postconditions`|the logical propositions that must be satisfied after a contract is executed|logical proposition (`Proposition`)|
+|`Obligations`|obligations have a name, a trigger(*optional*), two roles, an antecedent and a consequent. the trigger when satisfied, creates an instance of the obligation, while satisfying its antecedent will bring it to an *active state*, i.e. the debtor of the obligation _**must**_ satisfy the consequent.| `oblName`**`:`**`trigger:Proposition`**`-> O(`**`debtor:Role` **`,`**`creditor:Role`**`,`**`antecedent:Proposition`**`,`**`consequent:Proposition`**`)`**|
+|`Powers`|powers have a name, a trigger(*optional*), two roles, an antecedent and a consequent. the trigger when satisfied, creates an instance of the power, while satisfying its antecedent will bring it to an *active state*, i.e. the creditor of the power _**can**_ satisfy the consequent which is usually about creating, suspending, resuming or terminating the obligations/contract.| `powName`**`:`**`trigger:Proposition`**`-> P(`**`creditor:Role` **`,`**`debtor:Role`**`,`**`antecedent:Proposition`**`,`**`consequent:Proposition`**`)`**|
+|`Constraints`|the logical propositions that must be always satisfied during the execution of the contract|logical proposition (`Proposition`)|
 
-- The sample Sales-of-Goods contract, which is provided in `Symboleo-IDE/samples/MeatSale.symboleo`, illustrates how a simple contract can be specified in Symboleo.
+- The sample Sales-of-Goods contract, which is provided in `Symboleo-IDE/samples/MeatSaleContract.symboleo`, illustrates how a simple contract can be specified in Symboleo.
 ```
 Domain meatSaleDomain
-Seller isA Role with returnAddress: String, name: String;
-Buyer isA Role with warehouse: String;
-Currency isAn Enumeration(CAD, USD, EUR);
-MeatQuality isAn Enumeration(PRIME, AAA, AA, A);
-PerishableGood isAn Asset with quantity: Number, quality: MeatQuality;
-Meat isA PerishableGood;
-Delivered isAn Event with item: Meat, deliveryAddress: String, delDueDate: Date;
-Paid isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller, payDueDate: Date;
-PaidLate isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller;
-Disclosed isAn Event;
-
+  Seller isA Role with returnAddress: String, name: String;
+  Buyer isA Role with warehouse: String;
+  Currency isAn Enumeration(CAD, USD, EUR);
+  MeatQuality isAn Enumeration(PRIME, AAA, AA, A);
+  PerishableGood isAn Asset with quantity: Number, quality: MeatQuality;
+  Meat isA PerishableGood;
+  Delivered isAn Event with item: Meat, deliveryAddress: String, delDueDate: Date;
+  Paid isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller, payDueDate: Date;
+  PaidLate isAn Event with amount: Number, currency: Currency, from: Buyer, to: Seller;
+  Disclosed isAn Event;
 endDomain
 
 Contract MeatSale (buyer : Buyer, seller : Seller, qnt : Number, qlt : MeatQuality, amt : Number, curr : Currency, payDueDate: Date, 
 	delAdd : String, effDate : Date, delDueDateDays : Number, interestRate: Number
 )
 
-Declarations 
-goods: Meat with quantity := qnt, quality := qlt;
-delivered: Delivered with item := goods, deliveryAddress := delAdd, delDueDate := Date.add(effDate, delDueDateDays, days);
-paidLate: PaidLate with amount := (1 + interestRate / Math.abs(2)), currency := curr, from := buyer, to := seller;
-paid: Paid with amount := amt, currency := curr, from := buyer, to := seller, payDueDate := payDueDate;
-disclosed: Disclosed;
+Declarations
+  goods: Meat with quantity := qnt, quality := qlt;
+  delivered: Delivered with item := goods, deliveryAddress := delAdd, delDueDate := Date.add(effDate, delDueDateDays, days);
+  paidLate: PaidLate with amount := (1 + interestRate / 100) * amt, currency := curr, from := buyer, to := seller;
+  paid: Paid with amount := amt, currency := curr, from := buyer, to := seller, payDueDate := payDueDate;
+  disclosed: Disclosed;
 
 Preconditions
-IsOwner(goods, seller);
+  IsOwner(goods, seller);
 
 Postconditions
-IsOwner(goods, buyer) and not(IsOwner(goods, seller));
+  IsOwner(goods, buyer) and not(IsOwner(goods, seller));
 
 Obligations
-delivery: Obligation(seller, buyer, true, WhappensBefore(delivered, delivered.delDueDate));
-payment: O(buyer, seller , true, WhappensBefore(paid, paid.payDueDate));
-latePayment: Happens(Violated(payment)) -> O(buyer, seller, true, Happens(paidLate));
+  delivery: Obligation(seller, buyer, true, WhappensBefore(delivered, delivered.delDueDate));
+  payment: O(buyer, seller , true, WhappensBefore(paid, paid.payDueDate));
+  latePayment: Happens(Violated(obligations.payment)) -> O(buyer, seller, true, Happens(paidLate));
 
-Surviving Obligations
-so1 : Obligation(seller, buyer, true, not WhappensBefore(disclosed, Date.add(Activated(self), 6, months)));
-so2 : Obligation(buyer, seller, true, not WhappensBefore(disclosed, Date.add(Activated(self), 6, months)));
+//Surviving Obligations
+//  so1 : Obligation(seller, buyer, true, not WhappensBefore(disclosed, Date.add(Activated(self), 6, months)));
+//  so2 : Obligation(buyer, seller, true, not WhappensBefore(disclosed, Date.add(Activated(self), 6, months)));
 
 Powers
-suspendDelivery : Happens(Violated(payment)) -> Power(seller, buyer, true, Suspended(delivery));
-resumeDelivery: HappensWithin(paidLate, Suspension(delivery)) -> P(buyer, seller, true, Resumed(delivery));
-terminateContract: Happens(Violated(delivery)) -> P(buyer, seller, true, Terminated(self));
+  suspendDelivery : Happens(Violated(obligations.payment)) -> Power(seller, buyer, true, Suspended(obligations.delivery));
+  resumeDelivery: HappensWithin(paidLate, Suspension(obligations.delivery)) -> P(buyer, seller, true, Resumed(obligations.delivery));
+  terminateContract: Happens(Violated(obligations.delivery)) -> P(buyer, seller, true, Terminated(self));
 
 Constraints
-not(IsEqual(buyer, seller));
-CannotBeAssigned(suspendDelivery);
-CannotBeAssigned(resumeDelivery);
-CannotBeAssigned(terminateContract);
-CannotBeAssigned(delivery);
-CannotBeAssigned(payment);
-CannotBeAssigned(latePayment);
-delivered.delDueDate < paid.payDueDate;
+  not(IsEqual(buyer, seller));
+  CannotBeAssigned(suspendDelivery);
+  CannotBeAssigned(resumeDelivery);
+  CannotBeAssigned(terminateContract);
+  CannotBeAssigned(delivery);
+  CannotBeAssigned(payment);
+  CannotBeAssigned(latePayment);
+  delivered.delDueDate < paid.payDueDate;
 
 endContract
-
 ```
-
-# Future Work
-Static type-checking, scoping and code-generation features will be added in the future.
+# Examples
+Example of three contracts with their Symboleo specifications and generated smart contracts are avaialbe in another [repository](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-demo)).
