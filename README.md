@@ -104,4 +104,4 @@ Constraints
 endContract
 ```
 # Examples
-Example of three contracts with their Symboleo specifications and generated smart contracts are avaialbe in another [repository](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-demo)).
+Example of three contracts with their Symboleo specifications and generated smart contracts are avaialbe in another [repository](https://github.com/Smart-Contract-Modelling-uOttawa/Symboleo2SC-demo).
