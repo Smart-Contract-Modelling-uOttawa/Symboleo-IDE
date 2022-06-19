@@ -132,13 +132,13 @@ class SymboleoGenerator extends AbstractGenerator {
   val parameters = new ArrayList<Parameter>
   val variables = new ArrayList<Variable>
   
-  val triggeredConditionalObligations = new ArrayList<Obligation>
-  val triggeredConditionalSurvivingObligations = new ArrayList<Obligation>
-  val triggeredConditionalPowers = new ArrayList<Power>
+  val conditionalObligations = new ArrayList<Obligation>
+  val conditionalSurvivingObligations = new ArrayList<Obligation>
+  val conditionalPowers = new ArrayList<Power>
   
-  val triggeredUnconditionalObligations = new ArrayList<Obligation>
-  val triggeredUnconditionalSurvivingObligations = new ArrayList<Obligation>
-  val triggeredUnconditionalPowers = new ArrayList<Power>
+  val unconditionalObligations = new ArrayList<Obligation>
+  val unconditionalSurvivingObligations = new ArrayList<Obligation>
+  val unconditionalPowers = new ArrayList<Power>
   
   val untriggeredObligations = new ArrayList<Obligation>
   val untriggeredSurvivingObligations = new ArrayList<Obligation>
@@ -209,9 +209,9 @@ class SymboleoGenerator extends AbstractGenerator {
         triggeredObligations.add(obligation)
       }
       if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
-        triggeredUnconditionalObligations.add(obligation)
+        unconditionalObligations.add(obligation)
       } else {
-        triggeredConditionalObligations.add(obligation)
+        conditionalObligations.add(obligation)
       }
     }
     for (obligation : model.survivingObligations) {
@@ -221,9 +221,9 @@ class SymboleoGenerator extends AbstractGenerator {
         triggeredSurvivingObligations.add(obligation)
       }
       if (obligation.antecedent instanceof PAtomPredicateTrueLiteral) {
-        triggeredUnconditionalSurvivingObligations.add(obligation)
+        unconditionalSurvivingObligations.add(obligation)
       } else {
-        triggeredConditionalSurvivingObligations.add(obligation)
+        conditionalSurvivingObligations.add(obligation)
       }
     }
     for (power : model.powers) {
@@ -233,9 +233,9 @@ class SymboleoGenerator extends AbstractGenerator {
         triggeredPowers.add(power)
       }
       if (power.antecedent instanceof PAtomPredicateTrueLiteral) {
-        triggeredUnconditionalPowers.add(power)
+        unconditionalPowers.add(power)
       } else {
-        triggeredConditionalPowers.add(power)
+        conditionalPowers.add(power)
       }
     }
     
@@ -284,21 +284,21 @@ class SymboleoGenerator extends AbstractGenerator {
       }
     }
     // collect antecedent activates 
-    for (obligation : triggeredConditionalObligations) {
+    for (obligation : conditionalObligations) {
       val proposition = obligation.antecedent
       val list = collectPropositionEvents(proposition)
       if (list.size > 0) {
         obligationAntecedentEvents.put(obligation, list)
       }
     }
-    for (obligation : triggeredConditionalSurvivingObligations) {
+    for (obligation : conditionalSurvivingObligations) {
       val proposition = obligation.antecedent
       val list = collectPropositionEvents(proposition)
       if (list.size > 0) {
         survivingObligationAntecedentEvents.put(obligation, list)
       }
     }
-    for (power : triggeredConditionalPowers) {
+    for (power : conditionalPowers) {
       val proposition = power.antecedent
       val list = collectPropositionEvents(proposition)
       if (list.size > 0) {
@@ -546,10 +546,11 @@ class SymboleoGenerator extends AbstractGenerator {
           createObligation_«obligation.name»(contract) { 
             if («generatePropositionString(obligation.trigger)») {
               if (contract.obligations.«obligation.name» == null || contract.obligations.«obligation.name».isFinished()) {
+                const isNewInstance =  contract.obligations.«obligation.name» != null && contract.obligations.«obligation.name».isFinished()
                 contract.obligations.«obligation.name» = new Obligation('«obligation.name»', «generateDotExpressionString(obligation.creditor, 'contract')», «generateDotExpressionString(obligation.debtor, 'contract')», contract)
-                if («generatePropositionString(obligation.antecedent)») {
+                if («obligation.antecedent instanceof PAtomPredicateTrueLiteral ? "true" : "!isNewInstance &&" + generatePropositionString(obligation.antecedent)») {
                   contract.obligations.«obligation.name».trigerredUnconditional()
-                  if («generatePropositionString(obligation.consequent)») {
+                  if (!isNewInstance && «generatePropositionString(obligation.consequent)») {
                     contract.obligations.«obligation.name».fulfilled()
                   }
                 } else {
@@ -581,10 +582,11 @@ class SymboleoGenerator extends AbstractGenerator {
             const effects = { powerCreated: false } 
             if («generatePropositionString(power.trigger)») {
               if (contract.powers.«power.name» == null || contract.powers.«power.name».isFinished()){
+                const isNewInstance =  contract.powers.«power.name» != null && contract.powers.«power.name».isFinished()
                 contract.powers.«power.name» = new Power('«power.name»', «generateDotExpressionString(power.creditor, 'contract')», «generateDotExpressionString(power.debtor, 'contract')», contract)
                 effects.powerCreated = true
                 effects.powerName = '«power.name»'
-                if («generatePropositionString(power.antecedent)») {
+                if («power.antecedent instanceof PAtomPredicateTrueLiteral ? "true" : "!isNewInstance &&" + generatePropositionString(power.antecedent)») {
                   contract.powers.«power.name».trigerredUnconditional()
                 } else {
                   contract.powers.«power.name».trigerredConditional()
@@ -676,23 +678,23 @@ class SymboleoGenerator extends AbstractGenerator {
     for (predicate : predicates) {
       val pf = predicate.predicateFunction
       switch (pf) {
-        PredicateFunctionHappens: line.append(generateEventObjectString(pf.event) + ', ')
-        PredicateFunctionWHappensBefore: line.append(generateEventObjectString(pf.event) + ', ')
-        PredicateFunctionHappensAfter: line.append(generateEventObjectString(pf.event) + ', ')
+        PredicateFunctionHappens: line.append(generateInternalEventObjectString(pf.event) + ', ')
+        PredicateFunctionWHappensBefore: line.append(generateInternalEventObjectString(pf.event) + ', ')
+        PredicateFunctionHappensAfter: line.append(generateInternalEventObjectString(pf.event) + ', ')
         PredicateFunctionSHappensBefore: {
-          line.append(generateEventObjectString(pf.event) + ', ')
-          val res = generatePointEventObjectString(pf.point.pointExpression)
+          line.append(generateInternalEventObjectString(pf.event) + ', ')
+          val res = generatePointInternalEventObjectString(pf.point.pointExpression)
           if (res !== null){
             line.append(res + ', ') 
           }  
         }
         PredicateFunctionHappensWithin: {
-          line.append(generateEventObjectString(pf.event) + ', ')
+          line.append(generateInternalEventObjectString(pf.event) + ', ')
           val interval = pf.interval.intervalExpression
           switch(interval){
             IntervalFunction: {
-              val res1 = generatePointEventObjectString(interval.arg1)
-              val res2 = generatePointEventObjectString(interval.arg2)              
+              val res1 = generatePointInternalEventObjectString(interval.arg1)
+              val res2 = generatePointInternalEventObjectString(interval.arg2)              
               if (res1 !== null) {
                 line.append(res1 + ', ') 
               }
@@ -708,7 +710,7 @@ class SymboleoGenerator extends AbstractGenerator {
     return line.toString
   }
 
-  def String generateEventObjectString(Event event) {
+  def String generateInternalEventObjectString(Event event) {
     switch (event) {
       VariableEvent: return '''new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, «generateDotExpressionString(event.variable, 'contract')»)'''
       ObligationEvent: return '''new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.«event.eventName», contract.«isSurvivingObligation(event.obligationVariable.name) ? "survivingObligations" : "obligations"».«event.obligationVariable.name»)'''
@@ -717,10 +719,10 @@ class SymboleoGenerator extends AbstractGenerator {
     }
   }
   
-  def String generatePointEventObjectString(PointExpression p) {
+  def String generatePointInternalEventObjectString(PointExpression p) {
     switch (p) {
       PointFunction: {
-        val res = generatePointEventObjectString(p.arg)
+        val res = generatePointInternalEventObjectString(p.arg)
         if(res !== null) {
           return res
         } else {
@@ -940,6 +942,14 @@ class SymboleoGenerator extends AbstractGenerator {
           «method»
           
         «ENDFOR»
+        «FOR method : compileExpirationTransactions(model)»
+          «method»
+          
+        «ENDFOR»
+        «FOR method : compilePowerExpirationTransactions(model)»
+          «method»
+          
+        «ENDFOR»
         
         async getState(ctx, contractId) {
         	const contractState = await ctx.stub.getState(contractId)
@@ -1017,6 +1027,64 @@ class SymboleoGenerator extends AbstractGenerator {
         
           if (contract.isInEffect()) {
             if (contract.survivingObligations.«obligation.name» != null && contract.survivingObligations.«obligation.name».violated()) {      
+              await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
+              return {successful: true}
+            } else {
+              return {successful: false}
+            }
+          } else {
+            return {successful: false}
+          }
+        }
+      ''')
+    }
+    return methods
+  }
+  
+  def List<String> compileExpirationTransactions(Model model) {
+    val methods = new ArrayList<String>
+
+    for (obligation : conditionalObligations) {
+      methods.add('''
+        async expireObligation_«obligation.name»(ctx, contractId) {
+          const contractState = await ctx.stub.getState(contractId)
+          if (contractState == null) {
+            return {successful: false}
+          }
+          const contract = deserialize(contractState.toString())
+          this.initialize(contract)
+        
+          if (contract.isInEffect()) {
+            if (contract.obligations.«obligation.name» != null && contract.obligations.«obligation.name».expired()) {      
+              await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
+              return {successful: true}
+            } else {
+              return {successful: false}
+            }
+          } else {
+            return {successful: false}
+          }
+        }
+      ''')
+    }
+    return methods
+  }
+
+  def List<String> compilePowerExpirationTransactions(Model model) {
+    val methods = new ArrayList<String>
+
+    for (power : allPowers) {
+      methods.add('''
+        async expirePower_«power.name»(ctx, contractId) {
+          const contractState = await ctx.stub.getState(contractId)
+          if (contractState == null) {
+            return {successful: false}
+          }
+          const contract = deserialize(contractState.toString())
+          this.initialize(contract)
+        
+          if (contract.isInEffect()) {
+            if (contract.powers.«power.name» != null && contract.powers.«power.name».expired()) {      
               await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
               return {successful: true}
             } else {
@@ -1408,19 +1476,6 @@ class SymboleoGenerator extends AbstractGenerator {
     fsa.generateFile("./" + model.contractName + "/domain/types/" + enumeration.name + ".js", code)
   }
 
-//  def RegularType getBaseType(DomainType domainType) {
-//    switch (domainType) {
-//      RegularType:
-//        if (domainType.ontologyType !== null) {
-//          return domainType
-//        } else {
-//          return getBaseType(domainType.regularType)
-//        }
-//      default:
-//        null
-//    }
-//  }
-
   def void generateAsset(IFileSystemAccess2 fsa, Model model, RegularType asset) {
     val isBase = asset.ontologyType !== null
 
@@ -1558,13 +1613,13 @@ class SymboleoGenerator extends AbstractGenerator {
       enumerations.clear()
       parameters.clear()
 
-      triggeredConditionalObligations.clear()
-      triggeredConditionalSurvivingObligations.clear()
-      triggeredConditionalPowers.clear()
+      conditionalObligations.clear()
+      conditionalSurvivingObligations.clear()
+      conditionalPowers.clear()
                                               
-      triggeredUnconditionalObligations.clear()
-      triggeredUnconditionalSurvivingObligations.clear()
-      triggeredUnconditionalPowers.clear()
+      unconditionalObligations.clear()
+      unconditionalSurvivingObligations.clear()
+      unconditionalPowers.clear()
                                               
       untriggeredObligations.clear()
       untriggeredSurvivingObligations.clear()
@@ -1604,13 +1659,13 @@ class SymboleoGenerator extends AbstractGenerator {
     enumerations.clear()
     parameters.clear()
     
-    triggeredConditionalObligations.clear()
-    triggeredConditionalSurvivingObligations.clear()
-    triggeredConditionalPowers.clear()
+    conditionalObligations.clear()
+    conditionalSurvivingObligations.clear()
+    conditionalPowers.clear()
                                               
-    triggeredUnconditionalObligations.clear()
-    triggeredUnconditionalSurvivingObligations.clear()
-    triggeredUnconditionalPowers.clear()
+    unconditionalObligations.clear()
+    unconditionalSurvivingObligations.clear()
+    unconditionalPowers.clear()
                                               
     untriggeredObligations.clear()
     untriggeredSurvivingObligations.clear()

@@ -365,7 +365,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
    */
   @Check(CheckType.FAST)
   public void checkExpressionVariables(VariableRef var) {
-    // each VariableRef in VariableDotExpression shoudl be defined
+    // each VariableRef in VariableDotExpression should be declared first
     EObject typeObject = Helpers.getDotExpressionType(var, this.variables, this.parameters);
     if (typeObject == null) {
       error("Variable '" + var.getVariable() + " is not defined.", var,
@@ -626,3 +626,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
 
 // warning about common keywords of Java, js , etc
 // Role, Asset, Event, when, for foreach while if else function __prototype 
+// args functions should resolve correctly
+// env vars should not be used in variables
+// model inheritance should not have cycles
+// variables used in expressions should not have cycles
