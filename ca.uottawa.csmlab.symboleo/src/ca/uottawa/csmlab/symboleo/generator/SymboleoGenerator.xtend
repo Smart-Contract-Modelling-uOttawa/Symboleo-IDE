@@ -422,7 +422,7 @@ class SymboleoGenerator extends AbstractGenerator {
     
     function deserialize(data) {
       const object = JSON.parse(data)
-      const contract = new «model.contractName»(«model.parameters.map[Parameter p | "object." + p.name].join(',')»)
+      const contract = new «model.contractName»(«model.parameters.map[Parameter p | "object." + p.name].join(', ')»)
       
       contract.state = object.state
       contract.activeState = object.activeState
@@ -436,7 +436,7 @@ class SymboleoGenerator extends AbstractGenerator {
         }
       }
     
-      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
+      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(', ')»]) {
         for(const eKey of Object.keys(object[key])) {
           contract[key][eKey] = object[key][eKey]
         }
@@ -796,14 +796,14 @@ class SymboleoGenerator extends AbstractGenerator {
   def String generatePropositionString(Proposition proposition) {
     switch (proposition) {
       POr:
-        return generatePropositionString(proposition.left) + "||" + generatePropositionString(proposition.right)
+        return generatePropositionString(proposition.left) + " || " + generatePropositionString(proposition.right)
       PAnd:
-        return generatePropositionString(proposition.left) + "&&" + generatePropositionString(proposition.right)
+        return generatePropositionString(proposition.left) + " && " + generatePropositionString(proposition.right)
       PEquality:
         return generatePropositionString(proposition.left) + getEqualityOperator(proposition.op) +
           generatePropositionString(proposition.right)
       PComparison:
-        return generatePropositionString(proposition.left) + proposition.op +
+        return generatePropositionString(proposition.left) + ' ' + proposition.op + ' ' +
           generatePropositionString(proposition.right)
       PAtomRecursive:
         return "(" + generatePropositionString(proposition.inner) + ")"
@@ -1255,7 +1255,7 @@ class SymboleoGenerator extends AbstractGenerator {
     val code = '''
       async init(ctx, args) {
       	const inputs = JSON.parse(args);
-        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(',')»)
+        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(', ')»)
         this.initialize(contractInstance)
         if (contractInstance.activated()) {
           // call trigger transitions for legal positions
@@ -1313,7 +1313,7 @@ class SymboleoGenerator extends AbstractGenerator {
       const { Str } = require(«UTILS_CLASS_IMPORT_PATH»)
       
       class «model.contractName» extends SymboleoContract {
-        constructor(«model.parameters.map[Parameter p | p.name].join(',')») {
+        constructor(«model.parameters.map[Parameter p | p.name].join(', ')») {
           super("«model.contractName»")
           this._name = "«model.contractName»"
           «FOR parameter : model.parameters»
@@ -1444,8 +1444,8 @@ class SymboleoGenerator extends AbstractGenerator {
 
   def String getEqualityOperator(String op) {
     switch (op) {
-      case '!=': return '!=='
-      case '==': return '==='
+      case '!=': return ' !== '
+      case '==': return ' === '
     }
   }
 
@@ -1484,7 +1484,7 @@ class SymboleoGenerator extends AbstractGenerator {
         const { Asset } = require(«ASSET_CLASS_IMPORT_PATH»);
         
         class «asset.name» extends Asset {
-          constructor(_name,«asset.attributes.map[Attribute a | a.name].join(',')») {
+          constructor(_name,«asset.attributes.map[Attribute a | a.name].join(', ')») {
             super()
             this._name = _name
             «FOR attribute : asset.attributes»
@@ -1505,8 +1505,8 @@ class SymboleoGenerator extends AbstractGenerator {
         const { «parentType.name» } = require("./«parentType.name».js");
         
         class «asset.name» extends «parentType.name» {
-          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(_name,«parentAttributes.map[Attribute a | a.name].join(',')»)
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(', ')») {
+            super(_name,«parentAttributes.map[Attribute a | a.name].join(', ')»)
             «FOR attribute : asset.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
@@ -1527,7 +1527,7 @@ class SymboleoGenerator extends AbstractGenerator {
         const { Event } = require(«EVENT_CLASS_IMPORT_PATH»);
         
         class «event.name» extends Event {
-          constructor(_name,«event.attributes.map[Attribute a | a.name].join(',')») {
+          constructor(_name,«event.attributes.map[Attribute a | a.name].join(', ')») {
             super()
             this._name = _name
             «FOR attribute : event.attributes»
@@ -1548,8 +1548,8 @@ class SymboleoGenerator extends AbstractGenerator {
         const { «parentType.name» } = require("./«parentType.name».js");
         
         class «event.name» extends «parentType.name» {
-          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(_name,«parentAttributes.map[Attribute a | a.name].join(',')»)
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(', ')») {
+            super(_name,«parentAttributes.map[Attribute a | a.name].join(', ')»)
             «FOR attribute : event.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»
@@ -1570,7 +1570,7 @@ class SymboleoGenerator extends AbstractGenerator {
         const { Role } = require(«ROLE_CLASS_IMPORT_PATH»);
         
         class «role.name» extends Role {
-          constructor(_name,«role.attributes.map[Attribute a | a.name].join(',')») {
+          constructor(_name,«role.attributes.map[Attribute a | a.name].join(', ')») {
             super()
             this._name = _name
             «FOR attribute : role.attributes»
@@ -1591,8 +1591,8 @@ class SymboleoGenerator extends AbstractGenerator {
         const { «parentType.name» } = require("./«parentType.name».js");
         
         class «role.name» extends «parentType.name» {
-          constructor(_name,«allAttributes.map[Attribute a | a.name].join(',')») {
-            super(_name,«parentAttributes.map[Attribute a | a.name].join(',')»)
+          constructor(_name,«allAttributes.map[Attribute a | a.name].join(', ')») {
+            super(_name,«parentAttributes.map[Attribute a | a.name].join(', ')»)
             «FOR attribute : role.attributes»
             this.«attribute.name» = «attribute.name»
             «ENDFOR»

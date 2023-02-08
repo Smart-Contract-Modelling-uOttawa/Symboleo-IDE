@@ -188,7 +188,7 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
    * check that variable initiations are valid
    */
   @Check(CheckType.FAST)
-  public void checkInitiationsAreValid(Variable var) {
+  public void checkInitializationsAreValid(Variable var) {
     RegularType type = var.getType();
 
     // get list of assignments
@@ -203,11 +203,11 @@ public class SymboleoValidator extends AbstractSymboleoValidator {
         // Env values shall not be set
         if (mod.getName().equalsIgnoreCase("Env") && isInitiated) {
           error("Env attribute '" + ((AssignExpression) res.get()).getName() + "' in " + type.getName()
-              + " shall not be initiated.", res.get(), SymboleoPackage.Literals.ASSIGN_EXPRESSION__NAME);
+              + " shall not be initialized.", res.get(), SymboleoPackage.Literals.ASSIGN_EXPRESSION__NAME);
         }
       } else if (!isInitiated && !atr.getName().equalsIgnoreCase("_timestamp")) {
         // all other attributes should be initiated
-        error("Attribute '" + atr.getName() + "' is not initiated in variable '" + var.getName() + "'. ", var,
+        error("Attribute '" + atr.getName() + "' is not initialized in variable '" + var.getName() + "'. ", var,
             SymboleoPackage.Literals.VARIABLE__ATTRIBUTES);
       }
     }
