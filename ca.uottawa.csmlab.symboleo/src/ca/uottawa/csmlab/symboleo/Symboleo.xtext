@@ -7,6 +7,7 @@ Model:
 	'Domain' domainName=ID
 	(domainTypes+=DomainType ';')+
 	'endDomain'
+	('TimeGranularity' 'is' timeUnits=TimeUnit)?
 	'Contract' contractName=ID '(' (parameters+=Parameter ',')+ (parameters+=Parameter) ')'
 	('Declarations' (variables+=Variable ';')*)?
 	('Preconditions' (preconditions+=Proposition ';')*)?
@@ -61,6 +62,11 @@ Variable:
 //	{AssignVariable} name=ID ':=' value=VariableDotExpression |
 //	AssignmentB;
 
+// Assign should be used for ENV parameters or parameters of the contract. any variable initiate in the declaration are 
+//can not be used because the initial value will be assigned to the variable each time you trigger any events.
+OAssignment:
+	{OAssignExpression} name2= VariableDotExpression op=":=" (value=Expression);
+	
 VariableDotExpression returns Ref:
 	VariableRef ({VariableDotExpression.ref=current} "." tail=[Attribute])*;
 
@@ -188,9 +194,11 @@ PredicateFunction:
 	{PredicateFunctionWHappensBeforeEvent} name='WhappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionSHappensBeforeEvent} name='ShappensBeforeE' '(' event1=Event ',' event2=Event ')' |
 	{PredicateFunctionHappensAfter} name='HappensAfter' '(' event=Event ',' point=Point ')' |
-	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' 
-	;
-
+	{PredicateFunctionOccurs} name='Occurs' '(' situation=Situation ',' interval=Interval ')' |
+	{PredicateFunctionAssignment} name='HappensAssign' '(' event=Event ',' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')' |
+	{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment (';' assignment+=OAssignment )*)?')'
+		;                                              //('with' attributes+=Assignment (',' attributes+=Assignment)*)?;
+	//{PredicateFunctionAssignmentOnly} name='Assign' '(' (assignment+=OAssignment)* (';' assignment+=OAssignment )?')'
 OtherFunction:
   {PredicateFunctionIsEqual} name='IsEqual' '(' arg1=ID ',' arg2=ID ')' |
   {PredicateFunctionIsOwner} name='IsOwner' '(' arg1=ID ',' arg2=ID ')' |
