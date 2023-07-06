@@ -166,13 +166,13 @@ class SymboleoGenerator extends AbstractGenerator {
   val survivingObligationTriggerEvents = new HashMap<Obligation, List<PAtomPredicate>>
   val powerTriggerEvents = new HashMap<Power, List<PAtomPredicate>>
 
+
   val obligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
   val survivingObligationAntecedentEvents = new HashMap<Obligation, List<PAtomPredicate>>
   val powerAntecedentEvents = new HashMap<Power, List<PAtomPredicate>>
   val obligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
   val survivingObligationFullfilmentEvents = new HashMap<Obligation, List<PAtomPredicate>>
-	
-	SymboleoPCGenerator symboleoPC
+  
 
   def void generateHFSource(IFileSystemAccess2 fsa, Model model) {
     parse(model)
@@ -249,12 +249,14 @@ class SymboleoGenerator extends AbstractGenerator {
       }
     }
     
+    
     allObligations.addAll(untriggeredObligations)
     allObligations.addAll(triggeredObligations)
     allSurvivingObligations.addAll(untriggeredSurvivingObligations)
     allSurvivingObligations.addAll(triggeredSurvivingObligations)
     allPowers.addAll(untriggeredPowers)
     allPowers.addAll(triggeredPowers)
+   
 
     // collect trigger events
     for (obligation : untriggeredObligations) {
@@ -278,6 +280,7 @@ class SymboleoGenerator extends AbstractGenerator {
         powerTriggerEvents.put(power, list)
       }
     }
+        
     // collect fulfillment events of obligations
     for (obligation : allObligations) {
       val proposition = obligation.consequent
@@ -315,7 +318,7 @@ class SymboleoGenerator extends AbstractGenerator {
         powerAntecedentEvents.put(power, list)
       }
     }
-
+   
   }
 
   def void generateNPMFile(IFileSystemAccess2 fsa, Model model) {
@@ -397,6 +400,8 @@ class SymboleoGenerator extends AbstractGenerator {
         generateEventMapLineString(
           obligationFullfilmentEvents.get(obligation), '''EventListeners.fulfillObligation_«obligation.name»'''))
     }
+    
+    
     for (obligation : survivingObligationFullfilmentEvents.keySet) {
       arrays.add(
         generateEventMapLineString(survivingObligationFullfilmentEvents.get(
@@ -407,7 +412,10 @@ class SymboleoGenerator extends AbstractGenerator {
 //      arrays.
 //        add('''[[new InternalEvent(InternalEventSource.obligation, InternalEventType.obligation.Fulfilled, contract.obligations.«obligation.name»)], EventListeners.successfullyTerminateContract],''')
 //    }
-
+      // for (line :arrays) {
+       
+   //     arraysEvents.add(line)}
+       
     return '''
       function getEventMap(contract) {
         return [
@@ -448,7 +456,7 @@ class SymboleoGenerator extends AbstractGenerator {
         }
       }
     
-      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(',')»]) {
+      for (const key of [«eventVariables.map[Variable v | "'" + v.name + "'"].join(', ')»]) {
         for(const eKey of Object.keys(object[key])) {
           contract[key][eKey] = object[key][eKey]
         }
@@ -824,7 +832,8 @@ class SymboleoGenerator extends AbstractGenerator {
       }
     }
   }
-
+ 
+  
   def List<PAtomPredicate> collectPropositionEvents(Proposition proposition) {
     val list = new ArrayList<PAtomPredicate>
     switch (proposition) {
@@ -922,7 +931,7 @@ class SymboleoGenerator extends AbstractGenerator {
       PredicateFunctionSHappensBefore: return '''Predicates.strongHappensBefore(«generateEventVariableString(predicate.event)», «generatePointExpresionString(predicate.point.pointExpression)») '''
       PredicateFunctionHappensWithin: return '''Predicates.happensWithin(«generateEventVariableString(predicate.event)», «generateIntervalExpresionArgString(predicate.interval.intervalExpression)») '''
       PredicateFunctionAssignment: return '''Predicates.happens(«generateEventVariableString(predicate.event)») '''
-       PredicateFunctionAssignmentOnly: return '''TRUE'''
+       PredicateFunctionAssignmentOnly: return '''true'''
     }
   }
 def String generatePredicateAssignString(PredicateFunction predicate) {
@@ -932,7 +941,6 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
       default : return " "	
     }
   }
-
   def String generateEventVariableString(Event event) {
     switch (event) {
       VariableEvent: return generateDotExpressionString(event.variable, 'contract')
@@ -1355,7 +1363,7 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
           }
           const contract = deserialize(contractState.toString())
           this.initialize(contract)
-          if (contract.isInEffect()) {
+          if (contract.isInEffect() «survivEvent(variable.name)» ){
             contract.«variable.name».happen(event)
             Events.emitEvent(contract, new InternalEvent(InternalEventSource.contractEvent, InternalEventType.contractEvent.Happened, contract.«variable.name»))
             await ctx.stub.putState(contractId, Buffer.from(serialize(contract)))
@@ -1373,7 +1381,7 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
     val code = '''
       async init(ctx, args) {
       	const inputs = JSON.parse(args);
-        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(',')»)
+        const contractInstance = new «model.contractName» («model.parameters.map[Parameter p | "inputs." + p.name].join(', ')»)
         this.initialize(contractInstance)
         if (contractInstance.activated()) {
           // call trigger transitions for legal positions
@@ -1521,6 +1529,7 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
         return '"' + argExpression.value + '"'
       AtomicExpressionParameter:
         return generateDotExpressionString(argExpression.value, thisString)
+       
     }
   }
 
@@ -1556,13 +1565,17 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
         return functionCall.name.replace("String", "Str") + "(" + generateExpressionString(functionCall.arg1, thisString) + ")"
       ThreeArgDateFunction:
         return '''Utils.addTime(«generateExpressionString(functionCall.arg1, thisString)», «generateExpressionString(functionCall.value, thisString)», "«functionCall.timeUnit»")'''
+  //  TwoArgUserFunction:
+   //     return functionCall.name + "(" + functionCall.arg1.toString() + "," +
+    //      functionCall.arg2.toString() + ")"
     }
+    
   }
 
   def String getEqualityOperator(String op) {
     switch (op) {
-      case '!=': return '!=='
-      case '==': return '==='
+      case '!=': return ' !== '
+      case '==': return ' === '
     }
   }
 
@@ -1764,12 +1777,8 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
       obligationFullfilmentEvents.clear()
       survivingObligationFullfilmentEvents.clear()
 
-      //System.out.println('generateHFSource: ' + e.contractName)
-      //generateHFSource(fsa, e)
-      
-      System.out.println('generatePCSource: ' + e.contractName)
-      var symboleoPC = new SymboleoPCGenerator()
-      symboleoPC.generatePCSource(fsa, e)
+      System.out.println('generateHFSource: ' + e.contractName)
+      generateHFSource(fsa, e)
     }
   }
 
@@ -1787,6 +1796,8 @@ def String generatePredicateAssignString(PredicateFunction predicate) {
     unconditionalObligations.clear()
     unconditionalSurvivingObligations.clear()
     unconditionalPowers.clear()
+    
+   // arrays.clear()
                                               
     untriggeredObligations.clear()
     untriggeredSurvivingObligations.clear()
