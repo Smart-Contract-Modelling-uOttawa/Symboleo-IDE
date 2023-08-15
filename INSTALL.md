@@ -2,7 +2,7 @@
 Please follow the instructions below, or watch a step-by-step installation Instructions for Symboleo IDE (https://www.dropbox.com/s/bd00x45hzkx946a/step%20by%20step%20installation%20of%20Symboleo%20IDE.mov?dl=0)
 
 ## Requirements
-- Eclipse 2019-09R or later
+- Eclipse 2019-09R or later ((Eclipse Modeling Tools)
 - Download the latest Xtext plugin [Instructions](https://www.eclipse.org/Xtext/download.html)
 
 ## Instructions
