@@ -1,0 +1,30 @@
+Assigning an enumeration item by name to a variable in the declaration part is not considered when generating the smart contract
+For example, currency:= Currency(CAD) this sentence assigns the Canadian dollar to the attribute currency. The grammar describes this syntax but the code generation doesn't support it.
+
+Domain transactiveEnergyDomain
+  Currency isAn Enumeration(CAD, USD, EUR);
+  Prosumer isA Role;
+  Buyer isA Role;
+  Energy isAn Asset with amount_kw: Number;
+  DispatchEnergy isAn Event with energy: Energy, dispatcher: Prosumer, recipient: Buyer, voltage: Number;
+  Pay isAn Event with amount: Number, currency: Currency, from: Buyer, to: Prosumer;
+  PayInterest isAn Event with amount: Number, currency: Currency, from: Buyer, to: Prosumer;
+endDomain
+
+Contract TransactiveEnergy (
+  prosumer_id: String,
+  buyer_id: String,
+  amount_kw: Number,
+  amount: Number,
+  percentage: Number,
+  voltage: Number,
+  min_voltage: Number,
+  max_voltage: Number
+)
+Declarations
+  prosumer: Prosumer;
+  buyer: Buyer;
+  energy: Energy with amount_kw := amount_kw;
+  evt_dispatch: DispatchEnergy with energy := energy, dispatcher := prosumer, recipient := buyer, voltage := voltage;
+  evt_pay: Pay with amount := amount, currency := Currency(CAD), from := buyer, to := prosumer;
+  evt_pay_interest: PayInterest with amount := (1 + percentage / 100) * amount, currency := := Currency(CAD), from := buyer, to := prosumer;
